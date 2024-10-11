@@ -7,14 +7,16 @@ Playground project for running a managed Kubernetes cluster with production grad
 3. Redis Cluster
 
 ```bash
+## Enable Experimental Features
+azd config set alpha.deployment.stacks on
+
+## Authenticate
 azd auth login
 
-# Prepare Environment
-azd init -e dev # This if first environment
+# Initialize Environment
+azd init -e dev 
 
 # Provisioning
 azd provision
 
-# Cleanup
-azd down --force --purge
 ```

@@ -9,6 +9,9 @@ param location string = resourceGroup().location
 @description('Server Size. - Standard_DS2_v2')
 param vmSize string
 
+@description('Load Elastic Stamp')
+param enableElasticStamp bool = true
+
 @description('Internal Configuration Object')
 var configuration = {
   name: 'main'
@@ -361,8 +364,18 @@ module managedCluster './managed-cluster/main.bicep' = {
             sshKnownHosts: ''
             syncIntervalInSeconds: 300
             timeoutInSeconds: 180
-            url: 'https://github.com/mspnp/aks-baseline'
+            url: 'https://github.com/danielscholl/cluster-paas'
           }
+          kustomizations: enableElasticStamp ? {
+            elastic: {
+              path: './software/elastic-stamp'
+              dependsOn: []
+              timeoutInSeconds: 600
+              syncIntervalInSeconds: 600
+              validation: 'none'
+              prune: true
+            } 
+          } : {}
         }
       ]
     }
