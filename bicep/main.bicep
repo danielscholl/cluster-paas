@@ -15,6 +15,9 @@ param vmSize string = 'Standard_DS4_v2'
 @description('Load Elastic Stamp')
 param enableElasticStamp bool = true
 
+@description('Date Stamp - Used for sentinel in configuration store.')
+param dateStamp string = utcNow()
+
 @description('Internal Configuration Object')
 var configuration = {
   name: 'main'
@@ -135,6 +138,39 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
 //  Configuration Resources                                        //
 //*****************************************************************//
 
+var configmapServices = [
+  {
+    name: 'osdu_sentinel'
+    value: dateStamp
+    label: 'configmap-services'
+  }
+  {
+    name: 'Settings:Message'
+    value: 'Hello from App Configuration'
+    contentType: 'text/plain'
+    label: 'configmap-services'
+  }
+  {
+    name: 'tenant_id'
+    value: subscription().tenantId
+    contentType: 'text/plain'
+    label: 'configmap-services'
+  }
+  {
+    name: 'azure_msi_client_id'
+    value: identity.outputs.clientId
+    contentType: 'text/plain'
+    label: 'configmap-services'
+  }
+  {
+    name: 'keyvault_uri'
+    value: keyvault.outputs.uri
+    contentType: 'text/plain'
+    label: 'configmap-services'
+  }
+]
+
+// AVM doesn't have a nice way to create the values in the store, so we modify the module to do that.
 module configurationStore './app-configuration/main.bicep' = {
   name: '${configuration.name}-appconfig'
   params: {
@@ -155,6 +191,9 @@ module configurationStore './app-configuration/main.bicep' = {
     ]
 
     enablePurgeProtection: false
+
+    // Add Configuration
+    keyValues: concat(union(configmapServices, []))
   }
 }
 
@@ -182,7 +221,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
     ]
 
     allowBlobPublicAccess: false
-    allowSharedKeyAccess: true
+    allowSharedKeyAccess: false
     publicNetworkAccess: 'Disabled'
 
     networkAcls: {
@@ -395,15 +434,16 @@ module managedCluster './managed-cluster/main.bicep' = {
   }
 }
 
-module roleAssignments './app_assignments.bicep' = {
-  name: '${configuration.name}-role-assignments'
+module assignments './assignments.bicep' = {
+  name: '${configuration.name}-assignments'
   params: {
     identityprincipalId: identity.outputs.principalId
-    // storageName: storageAccount.outputs.name
-    clusterName: managedCluster.outputs.name
     userObjectId: userObjectId
+    storageName: storageAccount.outputs.name
+    clusterName: managedCluster.outputs.name
   }
 }
+
 
 //*****************************************************************//
 //  Federated Credentials                                           //
@@ -440,7 +480,7 @@ module federatedCredentials './federated_identity.bicep' = [for (cred, index) in
 module appConfigProvider './app_configuration_provider.bicep' = {
   name: '${configuration.name}-appconfig-provider'
   params: {
-    clusterName: managedCluster.name
+    clusterName: managedCluster.outputs.name
   }
   dependsOn: [
     managedCluster
@@ -464,9 +504,12 @@ module prometheus 'aks_prometheus.bicep' = {
     }
 
     publicNetworkAccess: 'Enabled'    
-    clusterName: managedCluster.name
+    clusterName: managedCluster.outputs.name
     actionGroupId: ''
   }
+  dependsOn: [
+    managedCluster
+  ]
 }
 
 module grafana 'aks_grafana.bicep' = {
@@ -489,6 +532,9 @@ module grafana 'aks_grafana.bicep' = {
     zoneRedundancy: 'Disabled'
     prometheusName: prometheus.outputs.name
   }
+  dependsOn: [
+    prometheus
+  ]
 }
 
 

@@ -405,6 +405,9 @@ param metricLabelsAllowlist string = ''
 @description('Optional. A comma-separated list of Kubernetes cluster metrics annotations.')
 param metricAnnotationsAllowList string = ''
 
+@description('Optional. Whether to enable node auto-provisioning.')
+param enableNodeAutoProvisioning bool = false
+
 // =========== //
 // Variables   //
 // =========== //
@@ -792,6 +795,9 @@ resource managedCluster 'Microsoft.ContainerService/managedClusters@2024-04-02-p
       }
     }
     supportPlan: supportPlan
+    nodeProvisioningProfile: enableNodeAutoProvisioning ? {
+      mode: 'Auto'
+    } : null
   }
 }
 
