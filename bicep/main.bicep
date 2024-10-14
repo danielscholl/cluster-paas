@@ -135,7 +135,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
 //  Configuration Resources                                        //
 //*****************************************************************//
 
-module configurationStore 'br/public:avm/res/app-configuration/configuration-store:0.5.0' = {
+module configurationStore './app-configuration/main.bicep' = {
   name: '${configuration.name}-appconfig'
   params: {
     // Required parameters
@@ -160,53 +160,51 @@ module configurationStore 'br/public:avm/res/app-configuration/configuration-sto
 
 
 
-
-
 //*****************************************************************//
 //  Storage Resources                                             //
 //*****************************************************************//
-// module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
-//   name: '${configuration.name}-storage'
-//   params: {
-//     name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
-//     location: location
+module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
+  name: '${configuration.name}-storage'
+  params: {
+    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
+    location: location
 
-//     // Assign Tags
-//     tags: {
-//       layer: configuration.displayName
-//       id: rg_unique_id
-//     }
+    // Assign Tags
+    tags: {
+      layer: configuration.displayName
+      id: rg_unique_id
+    }
 
-//     diagnosticSettings: [
-//       {
-//         workspaceResourceId: logAnalytics.outputs.resourceId
-//       }
-//     ]
+    diagnosticSettings: [
+      {
+        workspaceResourceId: logAnalytics.outputs.resourceId
+      }
+    ]
 
-//     allowBlobPublicAccess: false
-//     allowSharedKeyAccess: true
-//     publicNetworkAccess: 'Disabled'
+    allowBlobPublicAccess: false
+    allowSharedKeyAccess: true
+    publicNetworkAccess: 'Disabled'
 
-//     networkAcls: {
-//       bypass: 'AzureServices'
-//       defaultAction: 'Allow'
-//     }
+    networkAcls: {
+      bypass: 'AzureServices'
+      defaultAction: 'Allow'
+    }
 
-//     managedIdentities: {
-//       userAssignedResourceIds: [
-//         identity.outputs.resourceId
-//       ]
-//     }
+    managedIdentities: {
+      userAssignedResourceIds: [
+        identity.outputs.resourceId
+      ]
+    }
 
-//     blobServices: {
-//       containers: [
-//         {
-//           name: 'gitops'
-//         }
-//       ]
-//     }
-//   }
-// }
+    blobServices: {
+      containers: [
+        {
+          name: 'gitops'
+        }
+      ]
+    }
+  }
+}
 
 // module gitOpsUpload './script-storage-upload/main.bicep' = {
 //   name: '${configuration.name}-storage-gitops-upload'
@@ -382,8 +380,8 @@ module managedCluster './managed-cluster/main.bicep' = {
             url: 'https://github.com/danielscholl/cluster-paas'
           }
           kustomizations: enableElasticStamp ? {
-            elastic: {
-              path: './software/elastic-stamp'
+            empty: {
+              path: './software/empty-stamp'
               dependsOn: []
               timeoutInSeconds: 600
               syncIntervalInSeconds: 600
