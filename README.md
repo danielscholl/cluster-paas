@@ -1,6 +1,6 @@
 # Cluster PaaS
 
-Playground project for running a managed Kubernetes cluster (AKS Automatic) with production grade software.
+Playground project for running a production grade solution using AKS Automatic with a production grade software deployment.
 
 
 | Security              | Networking                        | AutoScaling        | Observability                |
@@ -18,7 +18,7 @@ Playground project for running a managed Kubernetes cluster (AKS Automatic) with
 | Azure Key Vault       |                                   |                    |                              |
 | App Configuration     |                                   |                    |                              |
 | Azure Gitops          |                                   |                    |                              |
-
+| Azure Service Mesh    |                                   |                    |                              |
 
 
 1. Elastic Cluster Kubernetes Service (EKS)
