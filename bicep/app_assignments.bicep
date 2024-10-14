@@ -1,15 +1,35 @@
 // param operatorIdentityName string
-param identityprincipalId string
+param identityprincipalId string = ''
+param userObjectId string = ''
 
 @description('The name of the Azure Storage Account')
 param storageName string = ''
 
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
+@description('The name of the Azure Kubernetes Service Cluster')
+param clusterName string = ''
+
+
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = if (storageName != '' && identityprincipalId != '') {
   name: storageName
 }
 
+resource managedCluster 'Microsoft.ContainerService/managedClusters@2023-05-02-preview' existing = if (clusterName != '' && userObjectId != '') {
+  name: clusterName
+}
+
+var clusterAdminRole = resourceId('Microsoft.Authorization/roleDefinitions', 'b1ff04bb-8a4e-4dc4-8eb5-869397d1f96a')
+resource clusterAdminRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (clusterName != '' && userObjectId != '') {
+  scope: managedCluster
+  name: guid(userObjectId, managedCluster.id, clusterAdminRole)
+  properties: { 
+    roleDefinitionId: clusterAdminRole
+    principalType: 'User'
+    principalId: userObjectId
+  }
+}
+
 var storageFileDataSmbShareReader = resourceId('Microsoft.Authorization/roleDefinitions', 'aba4ae5f-2193-4029-9191-0cb91df5e314')
-resource storageRoleShare 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (storageName != '') {
+resource storageRoleShare 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (storageName != '' && identityprincipalId != '') {
   scope: storageAccount
   name: guid(identityprincipalId, storageAccount.id, storageFileDataSmbShareReader)
   properties: {
@@ -20,7 +40,7 @@ resource storageRoleShare 'Microsoft.Authorization/roleAssignments@2022-04-01' =
 }
 
 var storageBlobContributor = resourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
-resource storageRoleBlob 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (storageName != '') {
+resource storageRoleBlob 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (storageName != '' && identityprincipalId != '') {
   scope: storageAccount
   name: guid(identityprincipalId, storageAccount.id, storageBlobContributor)
   properties: {
@@ -31,7 +51,7 @@ resource storageRoleBlob 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
 }
 
 var storageTableContributor = resourceId('Microsoft.Authorization/roleDefinitions', '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3')
-resource storageRoleTable 'Microsoft.Authorization/roleAssignments@2022-04-01' =  if (storageName != '') {
+resource storageRoleTable 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (storageName != '' && identityprincipalId != '') {
   scope: storageAccount
   name: guid(identityprincipalId, storageAccount.id, storageTableContributor)
   properties: {
@@ -40,5 +60,3 @@ resource storageRoleTable 'Microsoft.Authorization/roleAssignments@2022-04-01' =
     principalId: identityprincipalId
   }
 }
-
-

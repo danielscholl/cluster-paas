@@ -84,6 +84,13 @@ param outboundType string = 'loadBalancer'
 ])
 param skuTier string = 'Standard'
 
+@description('Optional. AKS Name.')
+@allowed([
+  'Basic'
+  'Automatic'
+])
+param skuName string = 'Basic'
+
 @description('Optional. Version of Kubernetes specified when creating the managed cluster.')
 param kubernetesVersion string?
 
@@ -544,7 +551,7 @@ resource managedCluster 'Microsoft.ContainerService/managedClusters@2024-04-02-p
   tags: tags
   identity: identity
   sku: {
-    name: 'Base'
+    name: skuName
     tier: skuTier
   }
   properties: {

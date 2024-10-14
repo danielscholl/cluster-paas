@@ -6,8 +6,11 @@ metadata description = 'This instance deploys a managed Kubernetes cluster.'
 @description('Specify the Azure region to place the application definition.')
 param location string = resourceGroup().location
 
-@description('Server Size. - Standard_DS2_v2')
-param vmSize string
+@description('The object ID of the user to assign the cluster admin role to.')
+param userObjectId string
+
+@description('Server Size. - Standard_DS4_v2')
+param vmSize string = 'Standard_DS4_v2'
 
 @description('Load Elastic Stamp')
 param enableElasticStamp bool = true
@@ -63,62 +66,6 @@ module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.7.0' = {
     skuName: configuration.logs.sku
   }
 }
-
-
-
-// //*****************************************************************//
-// //  Storage Resources                                             //
-// //*****************************************************************//
-// module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
-//   name: '${configuration.name}-storage'
-//   params: {
-//     name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
-//     location: location
-
-//     // Assign Tags
-//     tags: {
-//       layer: configuration.displayName
-//       id: rg_unique_id
-//     }
-
-//     diagnosticSettings: [
-//       {
-//         workspaceResourceId: logAnalytics.outputs.resourceId
-//       }
-//     ]
-
-//     allowBlobPublicAccess: false
-//     allowSharedKeyAccess: true
-//     publicNetworkAccess: 'Disabled'
-
-//     networkAcls: {
-//       bypass: 'AzureServices'
-//       defaultAction: 'Allow'
-//     }
-
-//     managedIdentities: {
-//       userAssignedResourceIds: [
-//         identity.outputs.resourceId
-//       ]
-//     }
-
-//     blobServices: {
-//       containers: [
-//         {
-//           name: 'gitops'
-//         }
-//       ]
-//     }
-//   }
-// }
-
-// module roleAssignments './app_assignments.bicep' = {
-//   name: '${configuration.name}-role-assignments'
-//   params: {
-//     identityprincipalId: identity.outputs.principalId
-//     storageName: storageAccount.outputs.name
-//   }
-// }
 
 
 
@@ -214,7 +161,54 @@ module configurationStore 'br/public:avm/res/app-configuration/configuration-sto
 
 
 
-// module manifestDagShareUpload './script-storage-upload/main.bicep' = {
+
+//*****************************************************************//
+//  Storage Resources                                             //
+//*****************************************************************//
+// module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
+//   name: '${configuration.name}-storage'
+//   params: {
+//     name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
+//     location: location
+
+//     // Assign Tags
+//     tags: {
+//       layer: configuration.displayName
+//       id: rg_unique_id
+//     }
+
+//     diagnosticSettings: [
+//       {
+//         workspaceResourceId: logAnalytics.outputs.resourceId
+//       }
+//     ]
+
+//     allowBlobPublicAccess: false
+//     allowSharedKeyAccess: true
+//     publicNetworkAccess: 'Disabled'
+
+//     networkAcls: {
+//       bypass: 'AzureServices'
+//       defaultAction: 'Allow'
+//     }
+
+//     managedIdentities: {
+//       userAssignedResourceIds: [
+//         identity.outputs.resourceId
+//       ]
+//     }
+
+//     blobServices: {
+//       containers: [
+//         {
+//           name: 'gitops'
+//         }
+//       ]
+//     }
+//   }
+// }
+
+// module gitOpsUpload './script-storage-upload/main.bicep' = {
 //   name: '${configuration.name}-storage-gitops-upload'
 //   params: {
 //     storageAccountName: storageAccount.outputs.name
@@ -232,25 +226,6 @@ module configurationStore 'br/public:avm/res/app-configuration/configuration-sto
 //  Cluster Resources                                             //
 //*****************************************************************//
 
-var systemPoolProfile = {
-  name: 'systempool'
-  mode: 'System'
-  osType: 'Linux'
-  osSKU: 'AzureLinux'
-  type: 'VirtualMachineScaleSets'
-  osDiskType: 'Managed'
-  osDiskSizeGB: 128
-  vmSize: vmSize
-  count: 1
-  minCount: 1
-  maxCount: 3
-  maxPods: 30
-  enableAutoScaling: true
-
-  nodeTaints: [
-    'CriticalAddonsOnly=true:NoSchedule'
-  ]
-}
 
 // AVM doesn't support istioServiceMesh yet, so we need to use a modified module.
 module managedCluster './managed-cluster/main.bicep' = {
@@ -267,27 +242,39 @@ module managedCluster './managed-cluster/main.bicep' = {
     }
 
     skuTier: 'Standard'
+    skuName: 'Automatic'
 
-    primaryAgentPoolProfile: [
-      systemPoolProfile
-    ]
-
+    // These are all the things that are required for the Automatic SKU
     networkPlugin: 'azure'
     networkPluginMode: 'overlay'
-
-    enablePrivateCluster: false
-    disableLocalAccounts: true
-    enableAzureDefender: true
-    omsAgentEnabled: true
-
+    publicNetworkAccess: 'Enabled'
+    outboundType: 'managedNATGateway'
+    enableKeyvaultSecretsProvider: true
+    enableSecretRotation: true
+    enableImageCleaner: true
+    imageCleanerIntervalHours: 168
+    vpaAddon: true
+    kedaAddon: true
     enableOidcIssuerProfile: true
     enableWorkloadIdentity: true
-    enableImageCleaner: true
-    enableContainerInsights: true
-    enableKeyvaultSecretsProvider: true
-    
-
-    // Non-required parameters
+    azurePolicyEnabled: true
+    omsAgentEnabled: true
+    enableRBAC: true
+    aadProfileManaged: true
+    enablePrivateCluster: false
+    disableLocalAccounts: true
+    costAnalysisEnabled: true
+    enableStorageProfileDiskCSIDriver: true
+    enableStorageProfileFileCSIDriver: true
+    enableStorageProfileSnapshotController: true
+    enableStorageProfileBlobCSIDriver: true    
+    webApplicationRoutingEnabled: true
+    aksServicePrincipalProfile: {
+      clientId: 'msi'
+    }
+    managedIdentities: {
+      systemAssigned: true  
+    }
     maintenanceConfiguration: {
       maintenanceWindow: {
         schedule: {
@@ -305,15 +292,42 @@ module managedCluster './managed-cluster/main.bicep' = {
         startTime: '00:00'
       }
     }
-    managedIdentities: {
-      userAssignedResourcesIds: [
-        identity.outputs.resourceId
-      ]
-    }
+    primaryAgentPoolProfile: [
+      {
+        name: 'systempool'
+        mode: 'System'
+        vmSize: vmSize
+        count: 3
+        securityProfile: {
+          sshAccess: 'Disabled'
+        }
+      }
+    ]
 
+    // Additional Agent Pool Configurations
+    agentPools: [
+      {
+        name: 'userpool'
+        mode: 'User'
+        vmSize: vmSize
+        count: 1
+        availabilityZones: [
+          '1'
+          '2'
+          '3'
+        ]
+        nodeTaints: ['app=cluster:NoSchedule']
+        nodeLabels: {
+          app: 'cluster'
+        }
+      }
+    ]
+    
+    // These are things that are optional items for this solution.
+    enableAzureDefender: true
+    enableContainerInsights: true
     monitoringWorkspaceId: logAnalytics.outputs.resourceId
     enableAzureMonitorProfileMetrics: true
-
     diagnosticSettings: [
       {
         name: 'customSetting'
@@ -340,6 +354,7 @@ module managedCluster './managed-cluster/main.bicep' = {
       }
     ]
 
+    // Additional Add On Configurations
     istioServiceMeshEnabled: true
     istioIngressGatewayEnabled: true
     istioIngressGatewayType: 'External'
@@ -379,82 +394,18 @@ module managedCluster './managed-cluster/main.bicep' = {
         }
       ]
     }
-
-    agentPools: [
-      {
-        availabilityZones: [
-          '1'
-        ]
-        count: 1
-        enableAutoScaling: true
-        maxCount: 3
-        maxPods: 30
-        minCount: 1
-        minPods: 2
-        mode: 'User'
-        name: 'poolz1'
-        osDiskSizeGB: 128
-        osType: 'Linux'
-        scaleSetEvictionPolicy: 'Delete'
-        scaleSetPriority: 'Regular'
-        type: 'VirtualMachineScaleSets'
-        vmSize: vmSize
-        nodeTaints: ['app=cluster:NoSchedule']
-        nodeLabels: {
-          app: 'cluster'
-        }
-      }
-      {
-        name: 'poolz2'
-        availabilityZones: [
-          '2'
-        ]
-        count: 1
-        enableAutoScaling: true
-        maxCount: 3
-        maxPods: 30
-        minCount: 1
-        minPods: 2
-        mode: 'User'
-        osDiskSizeGB: 128
-        osType: 'Linux'
-        scaleSetEvictionPolicy: 'Delete'
-        scaleSetPriority: 'Regular'
-        type: 'VirtualMachineScaleSets'
-        vmSize: vmSize
-        nodeTaints: ['app=cluster:NoSchedule']
-        nodeLabels: {
-          app: 'cluster'
-        }
-      }
-      {
-        name: 'poolz3'
-        availabilityZones: [
-          '3'
-        ]
-        count: 1
-        enableAutoScaling: true
-        maxCount: 3
-        maxPods: 30
-        minCount: 1
-        minPods: 2
-        mode: 'User'
-        osDiskSizeGB: 128
-        osType: 'Linux'
-        scaleSetEvictionPolicy: 'Delete'
-        scaleSetPriority: 'Regular'
-        type: 'VirtualMachineScaleSets'
-        vmSize: vmSize
-        nodeTaints: ['app=cluster:NoSchedule']
-        nodeLabels: {
-          app: 'cluster'
-        }
-      }
-    ]
   }
 }
 
-
+module roleAssignments './app_assignments.bicep' = {
+  name: '${configuration.name}-role-assignments'
+  params: {
+    identityprincipalId: identity.outputs.principalId
+    // storageName: storageAccount.outputs.name
+    clusterName: managedCluster.outputs.name
+    userObjectId: userObjectId
+  }
+}
 
 //*****************************************************************//
 //  Federated Credentials                                           //
@@ -491,7 +442,7 @@ module federatedCredentials './federated_identity.bicep' = [for (cred, index) in
 module appConfigProvider './app_configuration_provider.bicep' = {
   name: '${configuration.name}-appconfig-provider'
   params: {
-    clusterName: managedCluster.outputs.name
+    clusterName: managedCluster.name
   }
   dependsOn: [
     managedCluster
@@ -515,7 +466,7 @@ module prometheus 'aks_prometheus.bicep' = {
     }
 
     publicNetworkAccess: 'Enabled'    
-    clusterName: managedCluster.outputs.name
+    clusterName: managedCluster.name
     actionGroupId: ''
   }
 }
