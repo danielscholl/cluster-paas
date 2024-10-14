@@ -27,19 +27,21 @@ azd provision
 This playground project is to explore the use of Azure Kubernetes Service Automatic (AKS-Automatic) with a focus on production grade software.
 
 
-| Security              | Networking                        | AutoScaling | Observability |
-|-----------------------|-----------------------------------|-------------|---------------|
-| Azure Linux           | __POD__ Azure CNI Overlay         | Node Autoprovision | Managed Prometheus |
-| Automatic Upgrades    | __INGRESS__ App Routing add-on    | KEDA add-on        | Container Insights |
-| Azure RBAC enabled    | __EGRESS__ NAT Gateway            | VPA add-on         |Azure Managed Grafana |
+| Security              | Networking                        | AutoScaling        | Observability                |
+|-----------------------|-----------------------------------|--------------------|------------------------------|
+| Azure Linux           | Azure CNI Overlay                 | Node Autoprovision | Managed Prometheus           |
+| Automatic Upgrades    | App Routing add-on                | KEDA add-on        | Container Insights           |
+| Azure RBAC            | NAT Gateway                       | VPA add-on         | Azure Managed Grafana        | 
 | Local access disabled |                                   |                    | Container Insights workbooks |
-| SSH access disabled   |                                   |                    | Azure Policy Dashboards |
-| Workload Identity  addon   |                              |                    | Prometheus Alert Rules |
-| Image Cleaner addon   |                                   |                    | Azure Action Groups |
-| NRG Lockdown          |                                   |                    |  |
-| Deployment Safeguards |                                   |                    |  |
-| Azure Policy addon    |                                   |                    |  |
-| Azure Key Vault addon |                                   |                    |  |
+| SSH access disabled   |                                   |                    | Azure Policy Dashboards      |
+| Workload Identity     |                                   |                    | Prometheus Alert Rules       |
+| Image Cleaner         |                                   |                    | Azure Action Groups          |
+| NRG Lockdown          |                                   |                    |                              |
+| Deployment Safeguards |                                   |                    |                              |
+| Azure Policy          |                                   |                    |                              |
+| Azure Key Vault       |                                   |                    |                              |
+| App Configuration     |                                   |                    |                              |
+| Azure Gitops          |                                   |                    |                              |
 
 
 ### Register the feature flags
