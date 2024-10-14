@@ -1,30 +1,6 @@
 # Cluster PaaS
 
-Playground project for running a managed Kubernetes cluster with production grade software.
-
-1. Elastic Cluster Kubernetes Service (EKS)
-2. Azure Container Native PostgreSQL (CNPG)
-3. Redis Cluster
-
-```bash
-## Enable Experimental Features
-azd config set alpha.deployment.stacks on
-
-## Authenticate
-azd auth login
-
-# Initialize Environment
-azd init -e dev 
-
-# Provisioning
-azd provision
-
-```
-
-
-## Notes
-
-This playground project is to explore the use of Azure Kubernetes Service Automatic (AKS-Automatic) with a focus on production grade software.
+Playground project for running a managed Kubernetes cluster (AKS Automatic) with production grade software.
 
 
 | Security              | Networking                        | AutoScaling        | Observability                |
@@ -42,6 +18,12 @@ This playground project is to explore the use of Azure Kubernetes Service Automa
 | Azure Key Vault       |                                   |                    |                              |
 | App Configuration     |                                   |                    |                              |
 | Azure Gitops          |                                   |                    |                              |
+
+
+
+1. Elastic Cluster Kubernetes Service (EKS)
+2. Azure Container Native PostgreSQL (CNPG)
+3. Redis Cluster
 
 
 ### Register the feature flags
@@ -65,6 +47,29 @@ az feature show --namespace Microsoft.ContainerService --name AutomaticSKUPrevie
 
 When the status reflects *Registered*, refresh the registration of the *Microsoft.ContainerService* resource provider by using the [az provider register](https://learn.microsoft.com/en-us/cli/azure/provider?view=azure-cli-latest#az-provider-register) command:
 
+
+### Provision the environment
+
 ```bash
 az provider register --namespace Microsoft.ContainerService
 ```
+
+```bash
+## Enable Experimental Features
+azd config set alpha.deployment.stacks on
+
+## Authenticate
+azd auth login
+
+# Initialize Environment
+azd init -e dev 
+
+# Provisioning
+azd provision
+
+```
+
+
+
+
+
