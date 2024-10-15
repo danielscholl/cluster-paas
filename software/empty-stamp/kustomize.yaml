@@ -70,6 +70,31 @@ spec:
             requests:
               cpu: 10m
               memory: 5242880
+          volumeMounts:
+            - name: index-html
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: index-html
+          configMap:
+            name: nginx-index-html
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-index-html
+  namespace: dummy
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Welcome to Nginx on CBL-Mariner</title>
+    </head>
+    <body>
+        <h1>Welcome to Nginx on CBL-Mariner!</h1>
+        <p>This is a the dummy cluster-paas page.</p>
+    </body>
+    </html>
 ---
 apiVersion: v1
 kind: Service
