@@ -1,0 +1,23 @@
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: mynginx-vpa
+  namespace: dummy
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: mynginx
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          cpu: 10m
+          memory: 5Mi
+        maxAllowed:
+          cpu: 1
+          memory: 1Gi
+        controlledResources:
+          - cpu
+          - memory

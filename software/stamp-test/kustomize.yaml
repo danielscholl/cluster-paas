@@ -1,0 +1,45 @@
+######################
+## Global Component
+######################
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: global
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./global
+  prune: true
+  wait: true
+
+######################
+## Test Sample
+######################
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: test-sample
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: global
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./test-sample
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: mynginx
+      namespace: dummy

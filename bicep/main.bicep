@@ -354,9 +354,9 @@ module managedCluster './managed-cluster/main.bicep' = {
           '2'
           '3'
         ]
-        nodeTaints: ['app=cluster:NoSchedule']
+        nodeTaints: ['app=cluster-paas:NoSchedule']
         nodeLabels: {
-          app: 'cluster'
+          app: 'cluster-paas'
         }
       }
     ]
@@ -422,7 +422,7 @@ module managedCluster './managed-cluster/main.bicep' = {
           }
           kustomizations: enableElasticStamp ? {
             empty: {
-              path: './software/empty-stamp'
+              path: './software/stamp-test'
               dependsOn: []
               timeoutInSeconds: 600
               syncIntervalInSeconds: 600
