@@ -12,6 +12,9 @@ param userObjectId string
 @description('Load Service Mesh')
 param enableMesh bool = false
 
+@description('Enable PaaS pool')
+param enablePaasPool bool = false
+
 @description('Deploy Elastic')
 param stampTest bool = true
 
@@ -425,7 +428,7 @@ module managedCluster './managed-cluster/main.bicep' = {
     ]
 
     // Additional Agent Pool Configurations
-    agentPools: [
+    agentPools: concat([
       // Default User Pool has no taints or labels
       {
         name: 'defaultpool'
@@ -438,6 +441,7 @@ module managedCluster './managed-cluster/main.bicep' = {
           '3'
         ]
       }
+    ], enablePaasPool ? [
       {
         name: 'paaspool'
         mode: 'User'
@@ -453,7 +457,7 @@ module managedCluster './managed-cluster/main.bicep' = {
           app: 'cluster-paas'
         }
       }
-    ]
+    ] : [])
     
     // These are things that are optional items for this solution.
     enableAzureDefender: true
