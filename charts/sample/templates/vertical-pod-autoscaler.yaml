@@ -2,13 +2,13 @@
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: mynginx-vpa
-  namespace: dummy
+  name: {{ include "sample.fullname" . }}-vpa
+  namespace: {{ .Release.Namespace }}
 spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: mynginx
+    name: {{ include "sample.fullname" . }}
   resourcePolicy:
     containerPolicies:
       - containerName: '*'

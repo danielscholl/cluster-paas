@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sample.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sample.labels" . | nindent 4 }}
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      {{- include "sample.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "sample.selectorLabels" . | nindent 8 }}
+    spec:
+      nodeSelector:
+        app: cluster-paas
+      tolerations:
+      - key: "app"
+        operator: "Equal"
+        value: "cluster-paas"
+        effect: "NoSchedule"
+      containers:
+        - name: {{ .Chart.Name }}
+          image: mcr.microsoft.com/cbl-mariner/base/nginx:1.22
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 10m
+              memory: 5Mi
+          volumeMounts:
+            - name: index-html
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: index-html
+          configMap:
+            name: {{ include "sample.fullname" . }}-index-html

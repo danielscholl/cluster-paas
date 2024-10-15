@@ -419,7 +419,7 @@ module managedCluster './managed-cluster/main.bicep' = {
             url: 'https://github.com/danielscholl/cluster-paas'
           }
           kustomizations: enableElasticStamp ? {
-            empty: {
+            stampTest: {
               path: './software/stamp-test'
               dependsOn: []
               timeoutInSeconds: 600

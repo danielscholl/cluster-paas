@@ -1,0 +1,9 @@
+apiVersion: v2
+name: sample
+type: application
+description: Installs a sample test application
+version: 0.0.1
+appVersion: 0.0.1
+maintainers:
+  - name: danielscholl
+    url: https://github.com/danielscholl/cluster-paas
