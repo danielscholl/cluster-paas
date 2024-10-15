@@ -15,8 +15,11 @@ param vmSize string = 'Standard_DS4_v2'
 @description('Load Service Mesh')
 param enableMesh bool = false
 
-@description('Load Elastic Stamp')
-param enableElasticStamp bool = true
+@description('Deploy Elastic')
+param stampTest bool = true
+
+@description('Deploy Elastic')
+param stampElastic bool = false
 
 @description('Date Stamp - Used for sentinel in configuration store.')
 param dateStamp string = utcNow()
@@ -421,16 +424,36 @@ module managedCluster './managed-cluster/main.bicep' = {
             timeoutInSeconds: 180
             url: 'https://github.com/danielscholl/cluster-paas'
           }
-          kustomizations: enableElasticStamp ? {
-            stampTest: {
-              path: './software/stamp-test'
+          kustomizations: {
+            global: {
+              path: './software/global'
               dependsOn: []
               timeoutInSeconds: 600
               syncIntervalInSeconds: 600
               validation: 'none'
               prune: true
-            } 
-          } : {}
+            }
+            ...(stampTest ? {
+              stampTest: {
+                path: './software/stamp-test'
+                dependsOn: ['global']
+                timeoutInSeconds: 600
+                syncIntervalInSeconds: 600
+                validation: 'none'
+                prune: true
+              }
+            } : {})
+            ...(stampElastic ? {
+              stampElastic: {
+                path: './software/stamp-elastic'
+                dependsOn: ['global']
+                timeoutInSeconds: 600
+                syncIntervalInSeconds: 600
+                validation: 'none'
+                prune: true
+              }
+            } : {})
+          }
         }
       ]
     }

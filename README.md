@@ -1,6 +1,6 @@
 # Cluster PaaS
 
-Playground project for running a production grade solution using AKS Automatic with a production grade software deployment.
+Playground project for running production grade self hosted PaaS solutions using AKS Automatic.
 
 
 | Security              | Networking                        | AutoScaling        | Observability                |
