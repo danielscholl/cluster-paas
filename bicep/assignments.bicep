@@ -29,16 +29,16 @@ resource clusterAdminRoleAssignment 'Microsoft.Authorization/roleAssignments@202
 }
 
 
-var policyDefinitionId = resourceId('Microsoft.Authorization/policySetDefinitions', 'c047ea8e-9c78-49b2-958b-37e56d291a44')
-resource policyAssignment 'Microsoft.Authorization/policyAssignments@2021-06-01' = {
-  name: 'aksDeploymentSafeguardsAssignment'
-  scope: managedCluster
-  properties: {
-    displayName: 'AKS Deployment Safeguards'
-    policyDefinitionId: policyDefinitionId
-    parameters: {} // Add any parameters required by the policy definition here
-  }
-}
+// var policyDefinitionId = resourceId('Microsoft.Authorization/policySetDefinitions', 'c047ea8e-9c78-49b2-958b-37e56d291a44')
+// resource policyAssignment 'Microsoft.Authorization/policyAssignments@2024-04-01' = {
+//   name: 'aksDeploymentSafeguardsAssignment'
+//   scope: managedCluster
+//   properties: {
+//     displayName: 'AKS Deployment Safeguards'
+//     policyDefinitionId: policyDefinitionId
+//     parameters: {} // Add any parameters required by the policy definition here
+//   }
+// }
 
 var storageFileDataSmbShareReader = resourceId('Microsoft.Authorization/roleDefinitions', 'aba4ae5f-2193-4029-9191-0cb91df5e314')
 resource storageRoleShare 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (storageName != '' && identityprincipalId != '') {

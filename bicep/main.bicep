@@ -306,6 +306,7 @@ module managedCluster './managed-cluster/main.bicep' = {
     enableStorageProfileSnapshotController: true
     enableStorageProfileBlobCSIDriver: true    
     webApplicationRoutingEnabled: true
+    enableNodeAutoProvisioning: true
     aksServicePrincipalProfile: {
       clientId: 'msi'
     }
