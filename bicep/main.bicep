@@ -12,6 +12,9 @@ param userObjectId string
 @description('Server Size. - Standard_DS4_v2')
 param vmSize string = 'Standard_DS4_v2'
 
+@description('Load Service Mesh')
+param enableMesh bool = false
+
 @description('Load Elastic Stamp')
 param enableElasticStamp bool = true
 
@@ -391,9 +394,9 @@ module managedCluster './managed-cluster/main.bicep' = {
     ]
 
     // Additional Add On Configurations
-    istioServiceMeshEnabled: true
-    istioIngressGatewayEnabled: true
-    istioIngressGatewayType: 'External'
+    istioServiceMeshEnabled: enableMesh ? true : false
+    istioIngressGatewayEnabled: enableMesh ? true : false
+    istioIngressGatewayType: enableMesh ? 'External' : null
 
     fluxExtension: {
       configurationSettings: {
@@ -567,31 +570,31 @@ values.yaml: |
 }
 
 // Create the Initial Config Map for the App Configuration Provider
-// module appConfigMap './aks-config-map/main.bicep' = {
-//   name: '${configuration.name}-cluster-appconfig-configmap'
-//   params: {
-//     aksName: managedCluster.outputs.name
-//     location: location
-//     name: 'system-values'
-//     namespace: 'default'
+module appConfigMap './aks-config-map/main.bicep' = {
+  name: '${configuration.name}-cluster-appconfig-configmap'
+  params: {
+    aksName: managedCluster.outputs.name
+    location: location
+    name: 'system-values'
+    namespace: 'default'
     
-//     // Order of items matters here.
-//     fileData: [
-//       format(configMaps.appConfigTemplate, 
-//              subscription().tenantId, 
-//              identity.outputs.clientId,
-//              configurationStore.outputs.endpoint,
-//              keyvault.outputs.uri,
-//              keyvault.outputs.name)
-//     ]
+    // Order of items matters here.
+    fileData: [
+      format(configMaps.appConfigTemplate, 
+             subscription().tenantId, 
+             identity.outputs.clientId,
+             configurationStore.outputs.endpoint,
+             keyvault.outputs.uri,
+             keyvault.outputs.name)
+    ]
 
-//     newOrExistingManagedIdentity: 'existing'
-//     managedIdentityName: identity.outputs.name
-//     existingManagedIdentitySubId: subscription().subscriptionId
-//     existingManagedIdentityResourceGroupName:resourceGroup().name
-//   }
-//   dependsOn: [
-//     managedCluster
-//   ]
-// }
+    newOrExistingManagedIdentity: 'existing'
+    managedIdentityName: identity.outputs.name
+    existingManagedIdentitySubId: subscription().subscriptionId
+    existingManagedIdentityResourceGroupName:resourceGroup().name
+  }
+  dependsOn: [
+    grafana
+  ]
+}
 

@@ -18,7 +18,7 @@ resource managedCluster 'Microsoft.ContainerService/managedClusters@2023-05-02-p
 }
 
 var clusterAdminRole = resourceId('Microsoft.Authorization/roleDefinitions', 'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b')
-resource clusterAdminRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (clusterName != '' && userObjectId != '') {
+resource clusterAdminRoleAssignmentUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (clusterName != '' && userObjectId != '') {
   scope: managedCluster
   name: guid(userObjectId, managedCluster.id, clusterAdminRole)
   properties: { 
@@ -28,17 +28,28 @@ resource clusterAdminRoleAssignment 'Microsoft.Authorization/roleAssignments@202
   }
 }
 
+resource clusterAdminRoleAssignmentIdentity 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (clusterName != '' && identityprincipalId != '') {
+  scope: managedCluster
+  name: guid(identityprincipalId, managedCluster.id, clusterAdminRole)
+  properties: { 
+    roleDefinitionId: clusterAdminRole
+    principalType: 'ServicePrincipal'
+    principalId: identityprincipalId
+  }
+}
 
-// var policyDefinitionId = resourceId('Microsoft.Authorization/policySetDefinitions', 'c047ea8e-9c78-49b2-958b-37e56d291a44')
-// resource policyAssignment 'Microsoft.Authorization/policyAssignments@2024-04-01' = {
-//   name: 'aksDeploymentSafeguardsAssignment'
-//   scope: managedCluster
-//   properties: {
-//     displayName: 'AKS Deployment Safeguards'
-//     policyDefinitionId: policyDefinitionId
-//     parameters: {} // Add any parameters required by the policy definition here
-//   }
-// }
+
+var policyDefinitionId = '/providers/Microsoft.Authorization/policySetDefinitions/c047ea8e-9c78-49b2-958b-37e56d291a44'
+resource policyAssignment 'Microsoft.Authorization/policyAssignments@2024-04-01' = {
+  name: 'aksDeploymentSafeguardsAssignment'
+  scope: managedCluster
+  properties: {
+    displayName: 'AKS Deployment Safeguards'
+    #disable-next-line use-resource-id-functions
+    policyDefinitionId: policyDefinitionId
+    parameters: {} // Add any parameters required by the policy definition here
+  }
+}
 
 var storageFileDataSmbShareReader = resourceId('Microsoft.Authorization/roleDefinitions', 'aba4ae5f-2193-4029-9191-0cb91df5e314')
 resource storageRoleShare 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (storageName != '' && identityprincipalId != '') {

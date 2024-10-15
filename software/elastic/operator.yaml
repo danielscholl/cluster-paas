@@ -1,0 +1,35 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: GitRepository
+metadata:
+  name: elastic-operator
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: https://github.com/elastic/cloud-on-k8s
+  ref:
+    branch: "2.14"
+  ignore: |
+    # exclude all
+    /*
+    !/deploy/eck-operator
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: elastic-operator
+  namespace: flux-system
+spec:
+  targetNamespace: elastic
+  releaseName: elastic-operator
+  chart:
+    spec:
+      chart: ./deploy/eck-operator
+      sourceRef:
+        kind: GitRepository
+        name: elastic-operator
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  interval: 10m0s
