@@ -9,20 +9,19 @@ param location string = resourceGroup().location
 @description('The object ID of the user to assign the cluster admin role to.')
 param userObjectId string
 
-@description('Server Size. - Standard_DS4_v2')
-param vmSize string = 'Standard_DS4_v2'
-
 @description('Load Service Mesh')
 param enableMesh bool = false
 
 @description('Deploy Elastic')
-param stampTest bool = false
+param stampTest bool = true
 
 @description('Deploy Elastic')
 param stampElastic bool = false
 
 @description('Date Stamp - Used for sentinel in configuration store.')
 param dateStamp string = utcNow()
+
+
 
 @description('Internal Configuration Object')
 var configuration = {
@@ -32,6 +31,24 @@ var configuration = {
     sku: 'PerGB2018'
     retention: 30
   }
+  vault: {
+    sku: 'standard'
+  }
+  appconfig: {
+    sku: 'Standard'
+  }
+  storage: {
+    sku: 'Standard_LRS'
+    tier: 'Hot'
+  }
+  registry: {
+    sku: 'Standard'
+  }
+  cluster: {
+    sku: 'Automatic'
+    tier: 'Standard'
+    vmSize: 'Standard_DS3_v2'
+  }
 }
 
 @description('Unique ID for the resource group')
@@ -39,9 +56,9 @@ var rg_unique_id = '${replace(configuration.name, '-', '')}${uniqueString(resour
 
 
 
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
 //  Identity Resources                                             //
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
 module identity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.0' = {
   name: '${configuration.name}-user-managed-identity'
   params: {
@@ -58,9 +75,9 @@ module identity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.0
 
 
 
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
 //  Monitoring Resources                                           //
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
 module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.7.0' = {
   name: '${configuration.name}-log-analytics'
   params: {
@@ -78,9 +95,9 @@ module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.7.0' = {
 
 
 
-//*****************************************************************//
-//  Vault Resources                                           //
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
+//  Vault Resources                                                //
+/////////////////////////////////////////////////////////////////////
 @description('The list of secrets to persist to the Key Vault')
 var vaultSecrets = [ 
   {
@@ -98,6 +115,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
   params: {
     name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
     location: location
+    sku: configuration.vault.sku
     
     // Assign Tags
     tags: {
@@ -139,9 +157,9 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
 
 
 
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
 //  Configuration Resources                                        //
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
 @description('App Configuration Values for configmap-services')
 var configmapServices = [
   {
@@ -182,6 +200,7 @@ module configurationStore './app-configuration/main.bicep' = {
     // Required parameters
     name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id    
     location: location
+    sku: configuration.appconfig.sku
 
     // Assign Tags
     tags: {
@@ -204,15 +223,16 @@ module configurationStore './app-configuration/main.bicep' = {
 
 
 
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
 //  Storage Resources                                             //
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
 module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
   name: '${configuration.name}-storage'
   params: {
     name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
     location: location
-
+    skuName: configuration.storage.sku
+    accessTier: configuration.storage.tier
     // Assign Tags
     tags: {
       layer: configuration.displayName
@@ -263,11 +283,43 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
 // }
 
 
+module registry 'br/public:avm/res/container-registry/registry:0.5.1' = {
+  name: '${configuration.name}-registry'
+  params: {
+    // Required parameters
+    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id  
+    location: location
+    acrSku: configuration.registry.sku
 
-//*****************************************************************//
-//  Cluster Resources                                             //
-//*****************************************************************//
+    // Assign Tags
+    tags: {
+      layer: configuration.displayName
+      id: rg_unique_id
+    }
 
+    diagnosticSettings: [
+      {
+        workspaceResourceId: logAnalytics.outputs.resourceId
+      }
+    ]
+
+    roleAssignments: [{
+      roleDefinitionIdOrName: 'AcrPull'
+      principalId: identity.outputs.principalId
+      principalType: 'ServicePrincipal'
+    }]
+
+    // Non-required parameters
+    acrAdminUserEnabled: false
+    azureADAuthenticationAsArmPolicyStatus: 'disabled'
+
+  }
+}
+
+
+/////////////////////////////////////////////////////////////////////
+//  Cluster Resources                                              //
+/////////////////////////////////////////////////////////////////////
 // AVM doesn't support things like AKS Automatic SKU, so we use a custom module.
 module managedCluster './managed-cluster/main.bicep' = {
   name: '${configuration.name}-cluster'
@@ -282,8 +334,34 @@ module managedCluster './managed-cluster/main.bicep' = {
       id: rg_unique_id
     }
 
-    skuTier: 'Standard'
-    skuName: 'Automatic'
+    skuTier: configuration.cluster.tier
+    skuName: configuration.cluster.sku
+
+    diagnosticSettings: [
+      {
+        name: 'customSetting'
+        logCategoriesAndGroups: [
+          {
+            category: 'kube-apiserver'
+          }
+          {
+            category: 'kube-controller-manager'
+          }
+          {
+            category: 'kube-scheduler'
+          }
+          {
+            category: 'cluster-autoscaler'
+          }
+        ]
+        metricCategories: [
+          {
+            category: 'AllMetrics'
+          }
+        ]
+        workspaceResourceId: logAnalytics.outputs.resourceId
+      }
+    ]
 
     // These are all the things that are required for the Automatic SKU
     networkPlugin: 'azure'
@@ -338,8 +416,8 @@ module managedCluster './managed-cluster/main.bicep' = {
       {
         name: 'systempool'
         mode: 'System'
-        vmSize: vmSize
-        count: 3
+        vmSize: configuration.cluster.vmSize
+        count: 1
         securityProfile: {
           sshAccess: 'Disabled'
         }
@@ -348,10 +426,22 @@ module managedCluster './managed-cluster/main.bicep' = {
 
     // Additional Agent Pool Configurations
     agentPools: [
+      // Default User Pool has no taints or labels
       {
-        name: 'userpool'
+        name: 'defaultpool'
         mode: 'User'
-        vmSize: vmSize
+        vmSize: configuration.cluster.vmSize
+        count: 1
+        availabilityZones: [
+          '1'
+          '2'
+          '3'
+        ]
+      }
+      {
+        name: 'paaspool'
+        mode: 'User'
+        vmSize: configuration.cluster.vmSize
         count: 1
         availabilityZones: [
           '1'
@@ -370,37 +460,13 @@ module managedCluster './managed-cluster/main.bicep' = {
     enableContainerInsights: true
     monitoringWorkspaceId: logAnalytics.outputs.resourceId
     enableAzureMonitorProfileMetrics: true
-    diagnosticSettings: [
-      {
-        name: 'customSetting'
-        logCategoriesAndGroups: [
-          {
-            category: 'kube-apiserver'
-          }
-          {
-            category: 'kube-controller-manager'
-          }
-          {
-            category: 'kube-scheduler'
-          }
-          {
-            category: 'cluster-autoscaler'
-          }
-        ]
-        metricCategories: [
-          {
-            category: 'AllMetrics'
-          }
-        ]
-        workspaceResourceId: logAnalytics.outputs.resourceId
-      }
-    ]
 
     // Additional Add On Configurations
     istioServiceMeshEnabled: enableMesh ? true : false
     istioIngressGatewayEnabled: enableMesh ? true : false
     istioIngressGatewayType: enableMesh ? 'External' : null
 
+    // Software Configurations
     fluxExtension: {
       configurationSettings: {
         'helm-controller.enabled': 'true'
@@ -433,26 +499,14 @@ module managedCluster './managed-cluster/main.bicep' = {
               validation: 'none'
               prune: true
             }
-            ...(stampTest ? {
-              stampTest: {
-                path: './software/stamp-test'
-                dependsOn: ['global']
-                timeoutInSeconds: 600
-                syncIntervalInSeconds: 600
-                validation: 'none'
-                prune: true
-              }
-            } : {})
-            ...(stampElastic ? {
-              stampElastic: {
-                path: './software/stamp-elastic'
-                dependsOn: ['global']
-                timeoutInSeconds: 600
-                syncIntervalInSeconds: 600
-                validation: 'none'
-                prune: true
-              }
-            } : {})
+            stampTest: {
+              path: './software/stamp-test'
+              dependsOn: ['global']
+              timeoutInSeconds: 600
+              syncIntervalInSeconds: 600
+              validation: 'none'
+              prune: true
+            }
           }
         }
       ]
@@ -468,13 +522,14 @@ module assignments './assignments.bicep' = {
     userObjectId: userObjectId
     storageName: storageAccount.outputs.name
     clusterName: managedCluster.outputs.name
+    registryName: registry.outputs.name
   }
 }
 
 
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
 //  Federated Credentials                                           //
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
 @description('Federated Identities for Namespaces')
 var federatedIdentityCredentials = [
   {
@@ -502,9 +557,9 @@ module federatedCredentials './federated_identity.bicep' = [for (cred, index) in
 
 
 
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
 //  App Configuration Provider - Extension                         //
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
 // AKS has an extension for App Configuration but installing with Helm for now.
 module appConfigProvider './app_configuration_provider.bicep' = {
   name: '${configuration.name}-appconfig-provider'
@@ -518,15 +573,16 @@ module appConfigProvider './app_configuration_provider.bicep' = {
 
 
 
-//*****************************************************************//
-//  Managed Prometheus                                    //
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
+//  Managed Prometheus                                             //
+/////////////////////////////////////////////////////////////////////
 module prometheus 'aks_prometheus.bicep' = {
   name: '${configuration.name}-managed-prometheus'
   params: {
     // Basic Details
     name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
     location: location
+
     tags: {
       layer: configuration.displayName
       id: rg_unique_id
@@ -543,9 +599,9 @@ module prometheus 'aks_prometheus.bicep' = {
 
 
 
-//*****************************************************************//
-//  Managed Grafana                                        //
-//*****************************************************************//
+/////////////////////////////////////////////////////////////////////
+//  Managed Grafana                                                //
+/////////////////////////////////////////////////////////////////////
 module grafana 'aks_grafana.bicep' = {
   name: '${configuration.name}-managed-grafana'
 
@@ -593,31 +649,31 @@ values.yaml: |
 }
 
 // Create the Initial Config Map for the App Configuration Provider
-// module appConfigMap './aks-config-map/main.bicep' = {
-//   name: '${configuration.name}-cluster-appconfig-configmap'
-//   params: {
-//     aksName: managedCluster.outputs.name
-//     location: location
-//     name: 'system-values'
-//     namespace: 'default'
+module appConfigMap './aks-config-map/main.bicep' = {
+  name: '${configuration.name}-cluster-appconfig-configmap'
+  params: {
+    aksName: managedCluster.outputs.name
+    location: location
+    name: 'system-values'
+    namespace: 'default'
     
-//     // Order of items matters here.
-//     fileData: [
-//       format(configMaps.appConfigTemplate, 
-//              subscription().tenantId, 
-//              identity.outputs.clientId,
-//              configurationStore.outputs.endpoint,
-//              keyvault.outputs.uri,
-//              keyvault.outputs.name)
-//     ]
+    // Order of items matters here.
+    fileData: [
+      format(configMaps.appConfigTemplate, 
+             subscription().tenantId, 
+             identity.outputs.clientId,
+             configurationStore.outputs.endpoint,
+             keyvault.outputs.uri,
+             keyvault.outputs.name)
+    ]
 
-//     newOrExistingManagedIdentity: 'existing'
-//     managedIdentityName: identity.outputs.name
-//     existingManagedIdentitySubId: subscription().subscriptionId
-//     existingManagedIdentityResourceGroupName:resourceGroup().name
-//   }
-//   dependsOn: [
-//     grafana
-//   ]
-// }
+    newOrExistingManagedIdentity: 'existing'
+    managedIdentityName: identity.outputs.name
+    existingManagedIdentitySubId: subscription().subscriptionId
+    existingManagedIdentityResourceGroupName:resourceGroup().name
+  }
+  dependsOn: [
+    grafana
+  ]
+}
 

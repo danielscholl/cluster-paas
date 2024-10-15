@@ -8,6 +8,9 @@ param storageName string = ''
 @description('The name of the Azure Kubernetes Service Cluster')
 param clusterName string = ''
 
+@description('The name of the Azure Container Registry')
+param registryName string = ''
+
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = if (storageName != '' && identityprincipalId != '') {
   name: storageName
@@ -15,6 +18,10 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing 
 
 resource managedCluster 'Microsoft.ContainerService/managedClusters@2023-05-02-preview' existing = if (clusterName != '' && userObjectId != '') {
   name: clusterName
+}
+
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-06-01-preview' existing = if (registryName != '') {
+  name: registryName
 }
 
 var clusterAdminRole = resourceId('Microsoft.Authorization/roleDefinitions', 'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b')
@@ -105,5 +112,28 @@ resource storageRoleTable 'Microsoft.Authorization/roleAssignments@2022-04-01' =
     roleDefinitionId: storageTableContributor
     principalType: 'ServicePrincipal'
     principalId: identityprincipalId
+  }
+}
+
+var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+
+resource acrPullRoleCluster 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (registryName != '' && clusterName != '') {
+  name: guid(resourceGroup().id, managedCluster.id, acrPullRoleDefinitionId)
+  scope: containerRegistry
+  properties: {
+    principalId: managedCluster.properties.identityProfile.kubeletidentity.objectId
+    roleDefinitionId: acrPullRoleDefinitionId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+var acrContributorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
+resource acrPullRoleUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (registryName != '' && userObjectId != '') {
+  name: guid(resourceGroup().id, userObjectId, acrPullRoleDefinitionId)
+  scope: containerRegistry
+  properties: {
+    principalId: userObjectId
+    roleDefinitionId: acrContributorRoleDefinitionId
+    principalType: 'User'
   }
 }

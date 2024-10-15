@@ -54,4 +54,5 @@ Write-Host "`n==================================================================
 Write-Host "Removing Resource Group"
 Write-Host "=================================================================="
 
-az group delete --name $AZURE_RESOURCE_GROUP --location $AZURE_LOCATION --yes
+echo $AZURE_RESOURCE_GROUP
+# az group delete --name $AZURE_RESOURCE_GROUP --yes
