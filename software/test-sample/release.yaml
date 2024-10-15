@@ -9,7 +9,7 @@ spec:
   storageNamespace: sample
   chart:
     spec:
-      chart: ./charts/samples
+      chart: ./charts/sample
       sourceRef:
         kind: GitRepository
         name: flux-system
