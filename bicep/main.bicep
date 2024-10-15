@@ -75,7 +75,6 @@ module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.7.0' = {
 //*****************************************************************//
 //  Vault Resources                                           //
 //*****************************************************************//
-
 @description('The list of secrets to persist to the Key Vault')
 var vaultSecrets = [ 
   {
@@ -137,7 +136,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
 //*****************************************************************//
 //  Configuration Resources                                        //
 //*****************************************************************//
-
+@description('App Configuration Values for configmap-services')
 var configmapServices = [
   {
     name: 'osdu_sentinel'
@@ -170,7 +169,7 @@ var configmapServices = [
   }
 ]
 
-// AVM doesn't have a nice way to create the values in the store, so we modify the module to do that.
+// AVM doesn't have a nice way to create the values in the store, so we use a custom module.
 module configurationStore './app-configuration/main.bicep' = {
   name: '${configuration.name}-appconfig'
   params: {
@@ -263,8 +262,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
 //  Cluster Resources                                             //
 //*****************************************************************//
 
-
-// AVM doesn't support istioServiceMesh yet, so we need to use a modified module.
+// AVM doesn't support things like AKS Automatic SKU, so we use a custom module.
 module managedCluster './managed-cluster/main.bicep' = {
   name: '${configuration.name}-cluster'
   params: {
@@ -436,6 +434,7 @@ module managedCluster './managed-cluster/main.bicep' = {
   }
 }
 
+// RBAC and Policy Assignments Custom Module
 module assignments './assignments.bicep' = {
   name: '${configuration.name}-assignments'
   params: {
@@ -450,6 +449,7 @@ module assignments './assignments.bicep' = {
 //*****************************************************************//
 //  Federated Credentials                                           //
 //*****************************************************************//
+@description('Federated Identities for Namespaces')
 var federatedIdentityCredentials = [
   {
     name: 'federated-ns_default'
@@ -479,6 +479,7 @@ module federatedCredentials './federated_identity.bicep' = [for (cred, index) in
 //*****************************************************************//
 //  App Configuration Provider - Extension                         //
 //*****************************************************************//
+// AKS has an extension for App Configuration but installing with Helm for now.
 module appConfigProvider './app_configuration_provider.bicep' = {
   name: '${configuration.name}-appconfig-provider'
   params: {
@@ -492,7 +493,7 @@ module appConfigProvider './app_configuration_provider.bicep' = {
 
 
 //*****************************************************************//
-//  Managed Prometheus & Grafana                                   //
+//  Managed Prometheus                                    //
 //*****************************************************************//
 module prometheus 'aks_prometheus.bicep' = {
   name: '${configuration.name}-managed-prometheus'
@@ -514,6 +515,11 @@ module prometheus 'aks_prometheus.bicep' = {
   ]
 }
 
+
+
+//*****************************************************************//
+//  Managed Grafana                                        //
+//*****************************************************************//
 module grafana 'aks_grafana.bicep' = {
   name: '${configuration.name}-managed-grafana'
 
@@ -544,6 +550,7 @@ module grafana 'aks_grafana.bicep' = {
 // SecretProviderClass --> tenantId, clientId, keyvaultName
 // ServiceAccount --> tenantId, clientId
 // AzureAppConfigurationProvider --> tenantId, clientId, configEndpoint, keyvaultUri, keyvaultName
+@description('Default Config Map to get things needed for secrets and configmaps')
 var configMaps = {
   appConfigTemplate: '''
 values.yaml: |
@@ -559,31 +566,32 @@ values.yaml: |
   '''
 }
 
-// module appConfigMap './aks-config-map/main.bicep' = {
-//   name: '${configuration.name}-cluster-appconfig-configmap'
-//   params: {
-//     aksName: managedCluster.outputs.name
-//     location: location
-//     name: 'config-map-values'
-//     namespace: 'default'
+// Create the Initial Config Map for the App Configuration Provider
+module appConfigMap './aks-config-map/main.bicep' = {
+  name: '${configuration.name}-cluster-appconfig-configmap'
+  params: {
+    aksName: managedCluster.outputs.name
+    location: location
+    name: 'system-values'
+    namespace: 'default'
     
-//     // Order of items matters here.
-//     fileData: [
-//       format(configMaps.appConfigTemplate, 
-//              subscription().tenantId, 
-//              identity.outputs.clientId,
-//              configurationStore.outputs.endpoint,
-//              keyvault.outputs.uri,
-//              keyvault.outputs.name)
-//     ]
+    // Order of items matters here.
+    fileData: [
+      format(configMaps.appConfigTemplate, 
+             subscription().tenantId, 
+             identity.outputs.clientId,
+             configurationStore.outputs.endpoint,
+             keyvault.outputs.uri,
+             keyvault.outputs.name)
+    ]
 
-//     newOrExistingManagedIdentity: 'existing'
-//     managedIdentityName: identity.outputs.name
-//     existingManagedIdentitySubId: subscription().subscriptionId
-//     existingManagedIdentityResourceGroupName:resourceGroup().name
-//   }
-//   dependsOn: [
-//     managedCluster
-//   ]
-// }
+    newOrExistingManagedIdentity: 'existing'
+    managedIdentityName: identity.outputs.name
+    existingManagedIdentitySubId: subscription().subscriptionId
+    existingManagedIdentityResourceGroupName:resourceGroup().name
+  }
+  dependsOn: [
+    managedCluster
+  ]
+}
 
