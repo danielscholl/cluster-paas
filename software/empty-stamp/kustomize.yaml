@@ -48,4 +48,8 @@ spec:
       containers:
         - name: mynginx
           image: mcr.microsoft.com/cbl-mariner/base/nginx:1.22
+          resources:
+            requests:
+              cpu: 10m
+              memory: 5242880
           
