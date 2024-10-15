@@ -20,4 +20,4 @@ spec:
   healthChecks:
     - kind: Deployment
       name: mynginx
-      namespace: dummy
+      namespace: sample
