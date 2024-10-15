@@ -4,7 +4,7 @@ metadata:
   name: {{ include "sample.fullname" . }}-service
   namespace: {{ .Release.Namespace }}
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     {{- include "sample.selectorLabels" . | nindent 4 }}
   ports:

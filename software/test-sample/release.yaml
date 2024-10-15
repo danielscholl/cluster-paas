@@ -1,23 +1,22 @@
-# ---
-# apiVersion: helm.toolkit.fluxcd.io/v2
-# kind: HelmRelease
-# metadata:
-#   name: test-sample
-#   namespace: flux-system
-#   annotations:
-#     clusterconfig.azure.com/use-managed-source: "true"
-#     fluxcd.io/retrigger: "initial"  # Update this to a new value each time
-# spec:
-#   targetNamespace: sample
-#   chart:
-#     spec:
-#       chart: ./charts/samples
-#       sourceRef:
-#         kind: GitRepository
-#         name: flux-system
-#         namespace: flux-system
-#   interval: 5m0s
-#   install:
-#     remediation:
-#       retries: 3
-#     timeout: 15m  # Add this line to increase the timeout to 15 minutes
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: test-sample
+  namespace: sample
+  annotations:
+    clusterconfig.azure.com/use-managed-source: "true"
+spec:
+  targetNamespace: sample
+  chart:
+    spec:
+      chart: ./charts/samples
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+  interval: 5m0s
+  install:
+    remediation:
+      retries: 3
+    timeout: 5m
