@@ -593,31 +593,31 @@ values.yaml: |
 }
 
 // Create the Initial Config Map for the App Configuration Provider
-module appConfigMap './aks-config-map/main.bicep' = {
-  name: '${configuration.name}-cluster-appconfig-configmap'
-  params: {
-    aksName: managedCluster.outputs.name
-    location: location
-    name: 'system-values'
-    namespace: 'default'
+// module appConfigMap './aks-config-map/main.bicep' = {
+//   name: '${configuration.name}-cluster-appconfig-configmap'
+//   params: {
+//     aksName: managedCluster.outputs.name
+//     location: location
+//     name: 'system-values'
+//     namespace: 'default'
     
-    // Order of items matters here.
-    fileData: [
-      format(configMaps.appConfigTemplate, 
-             subscription().tenantId, 
-             identity.outputs.clientId,
-             configurationStore.outputs.endpoint,
-             keyvault.outputs.uri,
-             keyvault.outputs.name)
-    ]
+//     // Order of items matters here.
+//     fileData: [
+//       format(configMaps.appConfigTemplate, 
+//              subscription().tenantId, 
+//              identity.outputs.clientId,
+//              configurationStore.outputs.endpoint,
+//              keyvault.outputs.uri,
+//              keyvault.outputs.name)
+//     ]
 
-    newOrExistingManagedIdentity: 'existing'
-    managedIdentityName: identity.outputs.name
-    existingManagedIdentitySubId: subscription().subscriptionId
-    existingManagedIdentityResourceGroupName:resourceGroup().name
-  }
-  dependsOn: [
-    grafana
-  ]
-}
+//     newOrExistingManagedIdentity: 'existing'
+//     managedIdentityName: identity.outputs.name
+//     existingManagedIdentitySubId: subscription().subscriptionId
+//     existingManagedIdentityResourceGroupName:resourceGroup().name
+//   }
+//   dependsOn: [
+//     grafana
+//   ]
+// }
 
