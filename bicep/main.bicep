@@ -16,7 +16,7 @@ param vmSize string = 'Standard_DS4_v2'
 param enableMesh bool = false
 
 @description('Deploy Elastic')
-param stampTest bool = true
+param stampTest bool = false
 
 @description('Deploy Elastic')
 param stampElastic bool = false
