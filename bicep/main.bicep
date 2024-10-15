@@ -494,8 +494,8 @@ module managedCluster './managed-cluster/main.bicep' = {
             global: {
               path: './software/global'
               dependsOn: []
-              timeoutInSeconds: 600
-              syncIntervalInSeconds: 600
+              syncIntervalInSeconds: 300
+              timeoutInSeconds: 180
               validation: 'none'
               prune: true
             }
@@ -503,8 +503,8 @@ module managedCluster './managed-cluster/main.bicep' = {
               stamptest: {
                 path: './software/stamp-test'
                 dependsOn: ['global']
-                timeoutInSeconds: 600
-                syncIntervalInSeconds: 600
+                syncIntervalInSeconds: 300
+                timeoutInSeconds: 180
                 validation: 'none'
                 prune: true
               }
