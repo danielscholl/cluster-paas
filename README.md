@@ -66,10 +66,4 @@ azd init -e dev
 
 # Provisioning
 azd provision
-
 ```
-
-
-
-
-

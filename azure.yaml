@@ -9,10 +9,3 @@ infra:
     actionOnUnmanage: 
       resourceGroups: delete      # delete or detach
       resources: delete           # delete or detach
-
-hooks:
-  postdown:
-    interactive: true
-    continueOnError: false
-    shell: pwsh
-    run: ./scripts/post-down.ps1
