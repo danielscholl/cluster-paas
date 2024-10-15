@@ -12,6 +12,12 @@ param userObjectId string
 @description('Load Service Mesh')
 param enableMesh bool = false
 
+@description('Deploy Elastic')
+param stampTest bool = true
+
+@description('Deploy Elastic')
+param stampElastic bool = false
+
 @description('Date Stamp - Used for sentinel in configuration store.')
 param dateStamp string = utcNow()
 
@@ -493,14 +499,26 @@ module managedCluster './managed-cluster/main.bicep' = {
               validation: 'none'
               prune: true
             }
-            stamptest: {
-              path: './software/stamp-test'
-              dependsOn: ['global']
-              timeoutInSeconds: 600
-              syncIntervalInSeconds: 600
-              validation: 'none'
-              prune: true
-            }
+            ...(stampTest ? {
+              stamptest: {
+                path: './software/stamp-test'
+                dependsOn: ['global']
+                timeoutInSeconds: 600
+                syncIntervalInSeconds: 600
+                validation: 'none'
+                prune: true
+              }
+            } : {})
+            ...(stampElastic ? {
+              stampelastic: {
+                path: './software/stamp-elastic'
+                dependsOn: ['global']
+                timeoutInSeconds: 600
+                syncIntervalInSeconds: 600
+                validation: 'none'
+                prune: true
+              }
+            } : {})
           }
         }
       ]
