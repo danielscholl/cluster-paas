@@ -37,6 +37,31 @@ spec:
           configMap:
             name: nginx-index-html
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mynginx-service
+  namespace: dummy
+spec:
+  type: LoadBalancer
+  selector:
+    app: mynginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: mynginx-pdb
+  namespace: dummy
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: mynginx
+---
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
