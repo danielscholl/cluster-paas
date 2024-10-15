@@ -28,6 +28,24 @@ spec:
           - cpu
           - memory
 ---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: mynginx-so
+  namespace: dummy
+spec:
+  scaleTargetRef:
+    name: mynginx
+  pollingInterval: 30
+  cooldownPeriod: 300
+  minReplicaCount: 1
+  maxReplicaCount: 100
+  triggers:
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: '80'
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
