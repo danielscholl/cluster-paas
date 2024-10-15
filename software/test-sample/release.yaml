@@ -3,9 +3,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: test-sample
-  namespace: sample
-  annotations:
-    clusterconfig.azure.com/use-managed-source: "true"
+  namespace: flux-system
 spec:
   targetNamespace: sample
   chart:
