@@ -4,7 +4,7 @@ metadata:
   name: {{ include "sample.fullname" . }}-pdb
   namespace: {{ .Release.Namespace }}
 spec:
-  minAvailable: {{ .Values.pdb.minAvailable | default 2 }}
+  minAvailable: 2
   selector:
     matchLabels:
       {{- include "sample.selectorLabels" . | nindent 6 }}
