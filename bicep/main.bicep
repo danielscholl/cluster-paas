@@ -408,6 +408,7 @@ module managedCluster './managed-cluster/main.bicep' = {
       }
       configurations: [
         {
+          name: 'flux-system'
           namespace: 'flux-system'
           scope: 'cluster'
           gitRepository: {
