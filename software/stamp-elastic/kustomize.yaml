@@ -1,7 +1,19 @@
+######################
+## Elastic
+######################
+---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Namespace
+kind: Kustomization
 metadata:
-  name: elastic-stamp
-  labels:
-    toolkit.fluxcd.io/tenant: software-stamp
-
+  name: elastic
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/elastic
+  prune: true
+  wait: true
