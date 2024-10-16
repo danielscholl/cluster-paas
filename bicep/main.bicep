@@ -15,11 +15,11 @@ param enableMesh bool = false
 @description('Enable PaaS pool')
 param enablePaasPool bool = false
 
-@description('Deploy Elastic')
-param stampTest bool = true
+@description('Deploy Sample')
+param stampTest bool = false
 
 @description('Deploy Elastic')
-param stampElastic bool = false
+param stampElastic bool = true
 
 @description('Date Stamp - Used for sentinel in configuration store.')
 param dateStamp string = utcNow()
@@ -111,6 +111,18 @@ var vaultSecrets = [
     secretName: 'subscription-id'
     secretValue: subscription().subscriptionId
   }
+  {
+    secretName: 'elastic-username'
+    secretValue: 'elastic'
+  }
+  {
+    secretName: 'elastic-password'
+    secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltpass'), 0, 13)
+  }
+  {
+    secretName: 'elastic-key'
+    secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltkey'), 0, 13)
+  }
 ]
 
 module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
@@ -166,15 +178,9 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
 @description('App Configuration Values for configmap-services')
 var configmapServices = [
   {
-    name: 'osdu_sentinel'
+    name: 'sentinel'
     value: dateStamp
-    label: 'configmap-services'
-  }
-  {
-    name: 'Settings:Message'
-    value: 'Hello from App Configuration'
-    contentType: 'text/plain'
-    label: 'configmap-services'
+    label: 'common'
   }
   {
     name: 'tenant_id'
@@ -473,6 +479,7 @@ module managedCluster './managed-cluster/main.bicep' = {
     // Software Configurations
     fluxExtension: {
       configurationSettings: {
+        'multiTenancy.enforce': 'false'
         'helm-controller.enabled': 'true'
         'source-controller.enabled': 'true'
         'kustomize-controller.enabled': 'true'
@@ -517,8 +524,8 @@ module managedCluster './managed-cluster/main.bicep' = {
               stampelastic: {
                 path: './software/stamp-elastic'
                 dependsOn: ['global']
-                timeoutInSeconds: 600
-                syncIntervalInSeconds: 600
+                timeoutInSeconds: 300
+                syncIntervalInSeconds: 180
                 validation: 'none'
                 prune: true
               }

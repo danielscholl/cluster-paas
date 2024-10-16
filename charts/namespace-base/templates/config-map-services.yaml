@@ -1,0 +1,24 @@
+{{- $namespace := .Release.Namespace }}
+apiVersion: azconfig.io/v1
+kind: AzureAppConfigurationProvider
+metadata:
+  name: {{ include "namespace-base.fullname" . }}-services
+  namespace: {{ $namespace }}
+spec:
+  endpoint: {{ .Values.azure.configEndpoint }}
+  target:
+    configMapName: configmap-services
+  auth:
+    workloadIdentity:
+      serviceAccountName: workload-identity-sa
+  configuration:
+      selectors:
+        - keyFilter: "*"
+          labelFilter: "configmap-services"
+      refresh:
+        enabled: true
+        interval: 1m
+        monitoring:
+          keyValues:
+            - key: "sentinel"
+              label: "common"

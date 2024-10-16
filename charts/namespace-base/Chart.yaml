@@ -1,0 +1,9 @@
+apiVersion: v2
+name: namespace-base
+type: application
+description: Installs the Namespace Base Components
+version: 0.0.3
+appVersion: 0.0.1
+maintainers:
+  - name: danielscholl
+    url: https://github.com/danielscholl
