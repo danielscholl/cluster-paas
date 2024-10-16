@@ -2,7 +2,7 @@
 ## Cert Component
 ######################
 ---
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: component-certs
@@ -30,7 +30,7 @@ spec:
       name: cert-manager-webhook
       namespace: cert-manager
 ---
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: component-certs-ca
@@ -52,7 +52,7 @@ spec:
       name: root-ca-secret
       namespace: default
 ---
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: component-certs-ca-issuer
