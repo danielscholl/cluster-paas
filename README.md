@@ -2,6 +2,8 @@
 
 Playground project for running production grade self hosted PaaS solutions using AKS Automatic.
 
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fdanielscholl%2Fcluster-paasr%2Fmain%2Fazuredeploy.json)
+
 
 | Security              | Networking                        | AutoScaling        | Observability                |
 |-----------------------|-----------------------------------|--------------------|------------------------------|
@@ -18,8 +20,6 @@ Playground project for running production grade self hosted PaaS solutions using
 | Azure Key Vault       |                                   |                    |                              |
 | App Configuration     |                                   |                    |                              |
 | Azure Gitops          |                                   |                    |                              |
-| Azure Service Mesh    |                                   |                    |                              |
-
 
 1. Elastic Cluster Kubernetes Service (EKS)
 2. Azure Container Native PostgreSQL (CNPG)
