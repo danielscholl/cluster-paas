@@ -2,7 +2,7 @@
 ## Cert Component
 ######################
 ---
-apiVersion: kustomize.toolkit.fluxcd.io/v1
+apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 metadata:
   name: component-certs
