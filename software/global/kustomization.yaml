@@ -1,34 +1,34 @@
-# ######################
-# ## Cert Component
-# ######################
-# ---
-# apiVersion: kustomize.toolkit.fluxcd.io/v1
-# kind: Kustomization
-# metadata:
-#   name: component-certs
-#   namespace: flux-system
-# spec:
-#   dependsOn:
-#     - name: global
-#   interval: 1h
-#   retryInterval: 1m
-#   timeout: 5m
-#   sourceRef:
-#     kind: GitRepository
-#     name: flux-system
-#   path: ./software/certs
-#   prune: true
-#   wait: true
-#   healthChecks:
-#     - kind: Deployment
-#       name: cert-manager
-#       namespace: cert-manager
-#     - kind: Deployment
-#       name: cert-manager-cainjector
-#       namespace: cert-manager
-#     - kind: Deployment
-#       name: cert-manager-webhook
-#       namespace: cert-manager
+######################
+## Cert Component
+######################
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-certs
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: global
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/certs
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: cert-manager
+      namespace: cert-manager
+    - kind: Deployment
+      name: cert-manager-cainjector
+      namespace: cert-manager
+    - kind: Deployment
+      name: cert-manager-webhook
+      namespace: cert-manager
 # ---
 # apiVersion: kustomize.toolkit.fluxcd.io/v1
 # kind: Kustomization
