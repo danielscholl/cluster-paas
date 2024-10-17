@@ -545,7 +545,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
     publicNetworkAccess: 'Enabled'
     networkAcls: {
       bypass: 'AzureServices'
-      defaultAction: 'Allow'
+      defaultAction: 'Deny'
       ipRules: [
         {
           value: natPublicIp.outputs.ipAddress
