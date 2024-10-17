@@ -20,6 +20,8 @@ azure:
   keyvaultName: <your_keyvault>
   tenantId: <your_tenant_id>
 
+identity: true
+
 secrets:
   - secretName: <a_secret_name>
     data:
@@ -35,6 +37,8 @@ __Install Helm Chart__
 Install the helm chart.
 
 ```bash
+helm template keyvault-secrets . -f custom_values.yaml
+
 # Create Namespace
 NAMESPACE=default
 helm upgrade --install keyvault-secrets . -n default -f custom_values.yaml

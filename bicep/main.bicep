@@ -98,77 +98,6 @@ module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.7.0' = {
 
 
 
-/////////////////////////////////////////////////////////////////////
-//  Vault Resources                                                //
-/////////////////////////////////////////////////////////////////////
-@description('The list of secrets to persist to the Key Vault')
-var vaultSecrets = [ 
-  {
-    secretName: 'tenant-id'
-    secretValue: subscription().tenantId
-  }
-  {
-    secretName: 'subscription-id'
-    secretValue: subscription().subscriptionId
-  }
-  {
-    secretName: 'elastic-username'
-    secretValue: 'elastic'
-  }
-  {
-    secretName: 'elastic-password'
-    secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltpass'), 0, 13)
-  }
-  {
-    secretName: 'elastic-key'
-    secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltkey'), 0, 13)
-  }
-]
-
-module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
-  name: '${configuration.name}-keyvault'
-  params: {
-    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
-    location: location
-    sku: configuration.vault.sku
-    
-    // Assign Tags
-    tags: {
-      layer: configuration.displayName
-      id: rg_unique_id
-    }
-
-    diagnosticSettings: [
-      {
-        workspaceResourceId: logAnalytics.outputs.resourceId
-      }
-    ]
-
-    enablePurgeProtection: false
-    publicNetworkAccess: 'Disabled'
-    
-    // Configure RBAC
-    enableRbacAuthorization: true
-    roleAssignments: [{
-      roleDefinitionIdOrName: 'Key Vault Secrets User'
-      principalId: identity.outputs.principalId
-      principalType: 'ServicePrincipal'
-    }]
-
-    networkAcls: {
-      bypass: 'AzureServices'
-      defaultAction: 'Allow'
-    }
-
-    // Configure Secrets
-    secrets: [
-      for secret in vaultSecrets: {
-        name: secret.secretName
-        value: secret.secretValue
-      }
-    ]
-  }
-}
 
 
 
@@ -321,7 +250,6 @@ module registry 'br/public:avm/res/container-registry/registry:0.5.1' = {
     // Non-required parameters
     acrAdminUserEnabled: false
     azureADAuthenticationAsArmPolicyStatus: 'disabled'
-
   }
 }
 
@@ -537,6 +465,8 @@ module managedCluster './managed-cluster/main.bicep' = {
   }
 }
 
+
+
 // RBAC and Policy Assignments Custom Module
 module assignments './assignments.bicep' = {
   name: '${configuration.name}-assignments'
@@ -548,6 +478,95 @@ module assignments './assignments.bicep' = {
     registryName: registry.outputs.name
   }
 }
+
+/////////////////////////////////////////////////////////////////////
+//  Vault Resources                                                //
+/////////////////////////////////////////////////////////////////////
+@description('The list of secrets to persist to the Key Vault')
+var vaultSecrets = [ 
+  {
+    secretName: 'tenant-id'
+    secretValue: subscription().tenantId
+  }
+  {
+    secretName: 'subscription-id'
+    secretValue: subscription().subscriptionId
+  }
+  {
+    secretName: 'elastic-username'
+    secretValue: 'elastic'
+  }
+  {
+    secretName: 'elastic-password'
+    secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltpass'), 0, 13)
+  }
+  {
+    secretName: 'elastic-key'
+    secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltkey'), 0, 13)
+  }
+]
+
+module natPublicIp './nat_public_ip.bicep' = {
+  name: '${configuration.name}-nat-public-ip'
+  params: {
+    publicIpResourceId: managedCluster.outputs.outboundIpResourceId
+  }
+}
+
+module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
+  name: '${configuration.name}-keyvault'
+  params: {
+    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
+    location: location
+    sku: configuration.vault.sku
+    
+    // Assign Tags
+    tags: {
+      layer: configuration.displayName
+      id: rg_unique_id
+    }
+
+    diagnosticSettings: [
+      {
+        workspaceResourceId: logAnalytics.outputs.resourceId
+      }
+    ]
+
+    enablePurgeProtection: false
+    
+    // Configure RBAC
+    enableRbacAuthorization: true
+    roleAssignments: [{
+      roleDefinitionIdOrName: 'Key Vault Secrets User'
+      principalId: identity.outputs.principalId
+      principalType: 'ServicePrincipal'
+    }]
+
+    publicNetworkAccess: 'Enabled'
+    networkAcls: {
+      bypass: 'AzureServices'
+      defaultAction: 'Allow'
+      ipRules: [
+        {
+          value: natPublicIp.outputs.ipAddress
+        }
+      ]
+    }
+
+    // Configure Secrets
+    secrets: [
+      for secret in vaultSecrets: {
+        name: secret.secretName
+        value: secret.secretValue
+      }
+    ]
+  }
+  dependsOn: [
+    managedCluster
+    natPublicIp
+  ]
+}
+
 
 
 /////////////////////////////////////////////////////////////////////
