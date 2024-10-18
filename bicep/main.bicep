@@ -423,7 +423,7 @@ module managedCluster './managed-cluster/main.bicep' = {
             }
             sshKnownHosts: ''
             syncIntervalInSeconds: 300
-            timeoutInSeconds: 180
+            timeoutInSeconds: 300
             url: 'https://github.com/danielscholl/cluster-paas'
           }
           kustomizations: {
@@ -431,7 +431,7 @@ module managedCluster './managed-cluster/main.bicep' = {
               path: './software/global'
               dependsOn: []
               syncIntervalInSeconds: 300
-              timeoutInSeconds: 180
+              timeoutInSeconds: 300
               validation: 'none'
               prune: true
             }
@@ -440,7 +440,7 @@ module managedCluster './managed-cluster/main.bicep' = {
                 path: './software/stamp-test'
                 dependsOn: ['global']
                 syncIntervalInSeconds: 300
-                timeoutInSeconds: 180
+                timeoutInSeconds: 300
                 validation: 'none'
                 prune: true
               }
@@ -449,8 +449,8 @@ module managedCluster './managed-cluster/main.bicep' = {
               stampelastic: {
                 path: './software/stamp-elastic'
                 dependsOn: ['global']
+                syncIntervalInSeconds: 300
                 timeoutInSeconds: 300
-                syncIntervalInSeconds: 180
                 validation: 'none'
                 prune: true
               }
