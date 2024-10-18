@@ -150,6 +150,7 @@ module configurationStore './app-configuration/main.bicep' = {
     ]
 
     enablePurgeProtection: false
+    disableLocalAuth: true
 
     // Add Configuration
     keyValues: concat(union(configmapServices, []))
