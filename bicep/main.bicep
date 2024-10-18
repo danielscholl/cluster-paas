@@ -98,9 +98,6 @@ module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.7.0' = {
 
 
 
-
-
-
 /////////////////////////////////////////////////////////////////////
 //  Configuration Resources                                        //
 /////////////////////////////////////////////////////////////////////
@@ -577,6 +574,10 @@ var federatedIdentityCredentials = [
   {
     name: 'federated-ns_default'
     subject: 'system:serviceaccount:default:workload-identity-sa'
+  }
+  {
+    name: 'federated-ns_elastic'
+    subject: 'system:serviceaccount:elastic:workload-identity-sa'
   }
 ]
 
