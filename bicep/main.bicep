@@ -627,13 +627,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
     publicNetworkAccess: 'Enabled'
 
     networkAcls: {
-      bypass: 'AzureServices'
       defaultAction: 'Allow'
-      ipRules: [
-        {
-          value: natClusterIP.outputs.ipAddress
-        }
-      ]
     }
 
     managedIdentities: {
@@ -652,7 +646,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
   }
 }
 
-module gitOpsUpload './script-storage-upload/main.bicep' = {
+module gitOpsUpload './software-upload/main.bicep' = {
   name: '${configuration.name}-storage-gitops-upload'
   params: {
     storageAccountName: storageAccount.outputs.name
@@ -749,7 +743,13 @@ module storageAcl './storage_acl.bicep' = {
   name: '${configuration.name}-storage-acl'
   params: {
     storageName: storageAccount.outputs.name
+    location: location
+    skuName: configuration.storage.sku
+    natClusterIP: natClusterIP.outputs.ipAddress
   }
+  dependsOn: [
+    gitOpsUpload
+  ]
 }
 
 //--------------Config Map---------------

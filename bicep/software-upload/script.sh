@@ -25,16 +25,16 @@ echo "Extracting contents..."
 unzip -q repo.zip -d extracted_files
 
 # Find the software directory
-software_dir=$(find extracted_files -type d -name "software")
+software_dir=$(find extracted_files -type d -name "${UPLOAD_DIR}" -exec dirname {} \;)
 
 if [ -z "$software_dir" ]; then
-    echo "Error: 'software' directory not found in the extracted contents."
+    echo "Error: '${UPLOAD_DIR}' directory not found in the extracted contents."
     exit 1
 fi
 
 # Upload the contents of the software directory
 echo "Uploading files from ${software_dir} to blob container ${CONTAINER}"
-az storage blob upload-batch --destination ${CONTAINER} --source "${software_dir}" --pattern "*" --overwrite true --auth-mode login
+az storage blob upload-batch --destination ${CONTAINER} --source "${software_dir}" --pattern "${UPLOAD_DIR}/**" --overwrite true --auth-mode login
 echo "Files from software directory uploaded to blob container ${CONTAINER}."
 
 # Clean up

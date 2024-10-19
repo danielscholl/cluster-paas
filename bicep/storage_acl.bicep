@@ -1,5 +1,14 @@
 @description('The name of the Azure Storage Account')
-param storageName string = ''
+param storageName string
+
+@description('The location of the Azure Storage Account')
+param location string
+
+@description('The SKU name of the Azure Storage Account') 
+param skuName string
+
+@description('The IP address of the NAT cluster')
+param natClusterIP string = ''
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = if (storageName != '') {
   name: storageName
@@ -7,10 +16,21 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing 
 
 resource updateNetworkRules 'Microsoft.Storage/storageAccounts@2022-09-01' =  {
   name: storageAccount.name  // Reference the existing storage account's name
+  kind: 'StorageV2'
+  location: location
+  sku: {
+    name: skuName
+  }
   properties: {
+
     networkAcls: {
-      defaultAction: 'Deny'  // Deny access unless explicitly allowed
-      bypass: 'AzureServices'  // Allow access from Azure services (e.g., Azure Functions)
+      bypass: 'AzureServices'
+      defaultAction: 'Deny'
+      ipRules: natClusterIP != '' ? [
+        {
+          value: natClusterIP
+        }
+      ] : []
     }
   }
 }

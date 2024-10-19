@@ -11,6 +11,9 @@ param containerName string = 'gitops'
 @description('Name of the file as it is stored in the share')
 param filename string = 'main.zip'
 
+@description('Name of the directory to upload')
+param directoryName string = 'software'
+
 @description('Name of the file as it is stored in the share')
 param fileurl string = 'https://github.com/danielscholl/cluster-paas/archive/refs/heads/main.zip'
 
@@ -87,6 +90,7 @@ resource uploadFile 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       { name: 'FILE', value: filename }
       { name: 'URL', value: fileurl }
       { name: 'CONTAINER', value: containerName }
+      { name: 'UPLOAD_DIR', value: directoryName }
       { name: 'initialDelay', value: initialScriptDelay }
     ]
     scriptContent: loadTextContent('script.sh')
