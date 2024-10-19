@@ -99,160 +99,6 @@ module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.7.0' = {
 
 
 /////////////////////////////////////////////////////////////////////
-//  Configuration Resources                                        //
-/////////////////////////////////////////////////////////////////////
-@description('App Configuration Values for configmap-services')
-var configmapServices = [
-  {
-    name: 'sentinel'
-    value: dateStamp
-    label: 'common'
-  }
-  {
-    name: 'tenant_id'
-    value: subscription().tenantId
-    contentType: 'text/plain'
-    label: 'configmap-services'
-  }
-  {
-    name: 'azure_msi_client_id'
-    value: identity.outputs.clientId
-    contentType: 'text/plain'
-    label: 'configmap-services'
-  }
-  {
-    name: 'keyvault_uri'
-    value: keyvault.outputs.uri
-    contentType: 'text/plain'
-    label: 'configmap-services'
-  }
-]
-
-// AVM doesn't have a nice way to create the values in the store, so we use a custom module.
-module configurationStore './app-configuration/main.bicep' = {
-  name: '${configuration.name}-appconfig'
-  params: {
-    // Required parameters
-    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id    
-    location: location
-    sku: configuration.appconfig.sku
-
-    // Assign Tags
-    tags: {
-      layer: configuration.displayName
-      id: rg_unique_id
-    }
-
-    diagnosticSettings: [
-      {
-        workspaceResourceId: logAnalytics.outputs.resourceId
-      }
-    ]
-
-    enablePurgeProtection: false
-    disableLocalAuth: true
-
-    // Add Configuration
-    keyValues: concat(union(configmapServices, []))
-  }
-}
-
-
-
-/////////////////////////////////////////////////////////////////////
-//  Storage Resources                                             //
-/////////////////////////////////////////////////////////////////////
-module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
-  name: '${configuration.name}-storage'
-  params: {
-    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
-    location: location
-    skuName: configuration.storage.sku
-    accessTier: configuration.storage.tier
-    // Assign Tags
-    tags: {
-      layer: configuration.displayName
-      id: rg_unique_id
-    }
-
-    diagnosticSettings: [
-      {
-        workspaceResourceId: logAnalytics.outputs.resourceId
-      }
-    ]
-
-    allowBlobPublicAccess: false
-    allowSharedKeyAccess: false
-    publicNetworkAccess: 'Disabled'
-
-    networkAcls: {
-      bypass: 'AzureServices'
-      defaultAction: 'Allow'
-    }
-
-    managedIdentities: {
-      userAssignedResourceIds: [
-        identity.outputs.resourceId
-      ]
-    }
-
-    blobServices: {
-      containers: [
-        {
-          name: 'gitops'
-        }
-      ]
-    }
-  }
-}
-
-// module gitOpsUpload './script-storage-upload/main.bicep' = {
-//   name: '${configuration.name}-storage-gitops-upload'
-//   params: {
-//     storageAccountName: storageAccount.outputs.name
-//     location: location
-//     useExistingManagedIdentity: true
-//     managedIdentityName: identity.outputs.name
-//     existingManagedIdentitySubId: subscription().subscriptionId
-//     existingManagedIdentityResourceGroupName:resourceGroup().name
-//   }
-// }
-
-
-module registry 'br/public:avm/res/container-registry/registry:0.5.1' = {
-  name: '${configuration.name}-registry'
-  params: {
-    // Required parameters
-    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id  
-    location: location
-    acrSku: configuration.registry.sku
-
-    // Assign Tags
-    tags: {
-      layer: configuration.displayName
-      id: rg_unique_id
-    }
-
-    diagnosticSettings: [
-      {
-        workspaceResourceId: logAnalytics.outputs.resourceId
-      }
-    ]
-
-    roleAssignments: [{
-      roleDefinitionIdOrName: 'AcrPull'
-      principalId: identity.outputs.principalId
-      principalType: 'ServicePrincipal'
-    }]
-
-    // Non-required parameters
-    acrAdminUserEnabled: false
-    azureADAuthenticationAsArmPolicyStatus: 'disabled'
-  }
-}
-
-
-/////////////////////////////////////////////////////////////////////
 //  Cluster Resources                                              //
 /////////////////////////////////////////////////////////////////////
 // AVM doesn't support things like AKS Automatic SKU, so we use a custom module.
@@ -295,6 +141,19 @@ module managedCluster './managed-cluster/main.bicep' = {
           }
         ]
         workspaceResourceId: logAnalytics.outputs.resourceId
+      }
+    ]
+
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: 'Azure Kubernetes Service RBAC Cluster Admin'
+        principalId: userObjectId
+        principalType: 'User'
+      }
+      {
+        roleDefinitionIdOrName: 'Azure Kubernetes Service RBAC Cluster Admin'
+        principalId: identity.outputs.principalId
+        principalType: 'ServicePrincipal'
       }
     ]
 
@@ -403,83 +262,179 @@ module managedCluster './managed-cluster/main.bicep' = {
     istioIngressGatewayType: enableMesh ? 'External' : null
 
     // Software Configurations
-    fluxExtension: {
-      configurationSettings: {
-        'multiTenancy.enforce': 'false'
-        'helm-controller.enabled': 'true'
-        'source-controller.enabled': 'true'
-        'kustomize-controller.enabled': 'true'
-        'notification-controller.enabled': 'true'
-        'image-automation-controller.enabled': 'false'
-        'image-reflector-controller.enabled': 'false'
-      }
-      configurations: [
-        {
-          name: 'flux-system'
-          namespace: 'flux-system'
-          scope: 'cluster'
-          gitRepository: {
-            repositoryRef: {
-              branch: 'main'
-            }
-            sshKnownHosts: ''
-            syncIntervalInSeconds: 300
-            timeoutInSeconds: 300
-            url: 'https://github.com/danielscholl/cluster-paas'
-          }
-          kustomizations: {
-            global: {
-              path: './software/global'
-              dependsOn: []
-              syncIntervalInSeconds: 300
-              timeoutInSeconds: 300
-              validation: 'none'
-              prune: true
-            }
-            ...(stampTest ? {
-              stamptest: {
-                path: './software/stamp-test'
-                dependsOn: ['global']
-                syncIntervalInSeconds: 300
-                timeoutInSeconds: 300
-                validation: 'none'
-                prune: true
-              }
-            } : {})
-            ...(stampElastic ? {
-              stampelastic: {
-                path: './software/stamp-elastic'
-                dependsOn: ['global']
-                syncIntervalInSeconds: 300
-                timeoutInSeconds: 300
-                validation: 'none'
-                prune: true
-              }
-            } : {})
-          }
-        }
-      ]
-    }
+    // fluxExtension: {
+    //   configurationSettings: {
+    //     'multiTenancy.enforce': 'false'
+    //     'helm-controller.enabled': 'true'
+    //     'source-controller.enabled': 'true'
+    //     'kustomize-controller.enabled': 'true'
+    //     'notification-controller.enabled': 'true'
+    //     'image-automation-controller.enabled': 'false'
+    //     'image-reflector-controller.enabled': 'false'
+    //   }
+    // }
   }
 }
 
-
-
-// RBAC and Policy Assignments Custom Module
-module assignments './assignments.bicep' = {
-  name: '${configuration.name}-assignments'
+// Policy Assignments
+module assignments './aks_policy.bicep' = {
+  name: '${configuration.name}-policy-assignment'
   params: {
-    identityprincipalId: identity.outputs.principalId
-    userObjectId: userObjectId
-    storageName: storageAccount.outputs.name
     clusterName: managedCluster.outputs.name
-    registryName: registry.outputs.name
+  }
+  dependsOn: [
+    managedCluster
+  ]
+}
+
+// Retrieve the NAT Public IP
+module natClusterIP './nat_public_ip.bicep' = {
+  name: '${configuration.name}-nat-public-ip'
+  params: {
+    publicIpResourceId: managedCluster.outputs.outboundIpResourceId
   }
 }
 
+//  Federated Credentials
+@description('Federated Identities for Namespaces')
+var federatedIdentityCredentials = [
+  {
+    name: 'federated-ns_default'
+    subject: 'system:serviceaccount:default:workload-identity-sa'
+  }
+  {
+    name: 'federated-ns_elastic'
+    subject: 'system:serviceaccount:elastic:workload-identity-sa'
+  }
+]
+
+@batchSize(1)
+module federatedCredentials './federated_identity.bicep' = [for (cred, index) in federatedIdentityCredentials: {
+  name: '${configuration.name}-${cred.name}'
+  params: {
+    name: cred.name
+    audiences: [
+      'api://AzureADTokenExchange'
+    ]
+    issuer: managedCluster.outputs.oidcIssuerUrl
+    userAssignedIdentityName: identity.outputs.name
+    subject: cred.subject
+  }
+  dependsOn: [
+    managedCluster
+  ]
+}]
+
+
+
 /////////////////////////////////////////////////////////////////////
-//  Vault Resources                                                //
+//  Image Resources                                             //
 /////////////////////////////////////////////////////////////////////
+module registry 'br/public:avm/res/container-registry/registry:0.5.1' = {
+  name: '${configuration.name}-registry'
+  params: {
+    // Required parameters
+    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id  
+    location: location
+    acrSku: configuration.registry.sku
+
+    // Assign Tags
+    tags: {
+      layer: configuration.displayName
+      id: rg_unique_id
+    }
+
+    diagnosticSettings: [
+      {
+        workspaceResourceId: logAnalytics.outputs.resourceId
+      }
+    ]
+
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: 'AcrPull'
+        principalId: identity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: 'AcrPull'
+        principalId: managedCluster.outputs.kubeletIdentityObjectId
+        principalType: 'ServicePrincipal'
+      }
+    ]
+
+    // Non-required parameters
+    acrAdminUserEnabled: false
+    azureADAuthenticationAsArmPolicyStatus: 'disabled'
+  }
+  
+}
+
+
+
+/////////////////////////////////////////////////////////////////////
+//  Configuration Resources                                        //
+/////////////////////////////////////////////////////////////////////
+@description('App Configuration Values for configmap-services')
+var configmapServices = [
+  {
+    name: 'sentinel'
+    value: dateStamp
+    label: 'common'
+  }
+  {
+    name: 'tenant_id'
+    value: subscription().tenantId
+    contentType: 'text/plain'
+    label: 'configmap-services'
+  }
+  {
+    name: 'azure_msi_client_id'
+    value: identity.outputs.clientId
+    contentType: 'text/plain'
+    label: 'configmap-services'
+  }
+  {
+    name: 'keyvault_uri'
+    value: keyvault.outputs.uri
+    contentType: 'text/plain'
+    label: 'configmap-services'
+  }
+]
+
+// AVM doesn't have a nice way to create the values in the store, so we use a custom module.
+module configurationStore './app-configuration/main.bicep' = {
+  name: '${configuration.name}-appconfig'
+  params: {
+    // Required parameters
+    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id    
+    location: location
+    sku: configuration.appconfig.sku
+
+    // Assign Tags
+    tags: {
+      layer: configuration.displayName
+      id: rg_unique_id
+    }
+
+    diagnosticSettings: [
+      {
+        workspaceResourceId: logAnalytics.outputs.resourceId
+      }
+    ]
+
+    enablePurgeProtection: false
+    disableLocalAuth: true
+
+    // Add Configuration
+    keyValues: concat(union(configmapServices, []))
+  }
+  dependsOn: [
+    managedCluster
+  ]
+}
+
+//  Vault Resources
 @description('The list of secrets to persist to the Key Vault')
 var vaultSecrets = [ 
   {
@@ -503,13 +458,6 @@ var vaultSecrets = [
     secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltkey'), 0, 13)
   }
 ]
-
-module natPublicIp './nat_public_ip.bicep' = {
-  name: '${configuration.name}-nat-public-ip'
-  params: {
-    publicIpResourceId: managedCluster.outputs.outboundIpResourceId
-  }
-}
 
 module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
   name: '${configuration.name}-keyvault'
@@ -546,7 +494,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
       defaultAction: 'Deny'
       ipRules: [
         {
-          value: natPublicIp.outputs.ipAddress
+          value: natClusterIP.outputs.ipAddress
         }
       ]
     }
@@ -561,51 +509,17 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
   }
   dependsOn: [
     managedCluster
-    natPublicIp
+    natClusterIP
   ]
 }
 
 
 
 /////////////////////////////////////////////////////////////////////
-//  Federated Credentials                                           //
-/////////////////////////////////////////////////////////////////////
-@description('Federated Identities for Namespaces')
-var federatedIdentityCredentials = [
-  {
-    name: 'federated-ns_default'
-    subject: 'system:serviceaccount:default:workload-identity-sa'
-  }
-  {
-    name: 'federated-ns_elastic'
-    subject: 'system:serviceaccount:elastic:workload-identity-sa'
-  }
-]
-
-@batchSize(1)
-module federatedCredentials './federated_identity.bicep' = [for (cred, index) in federatedIdentityCredentials: {
-  name: '${configuration.name}-${cred.name}'
-  params: {
-    name: cred.name
-    audiences: [
-      'api://AzureADTokenExchange'
-    ]
-    issuer: managedCluster.outputs.oidcIssuerUrl
-    userAssignedIdentityName: identity.outputs.name
-    subject: cred.subject
-  }
-  dependsOn: [
-    managedCluster
-  ]
-}]
-
-
-
-/////////////////////////////////////////////////////////////////////
-//  App Configuration Provider - Extension                         //
+//  App Configuration Provider                                     //
 /////////////////////////////////////////////////////////////////////
 // AKS has an extension for App Configuration but installing with Helm for now.
-module appConfigProvider './app_configuration_provider.bicep' = {
+module appConfigProviderExtension './app_configuration_provider.bicep' = {
   name: '${configuration.name}-appconfig-provider'
   params: {
     clusterName: managedCluster.outputs.name
@@ -618,7 +532,7 @@ module appConfigProvider './app_configuration_provider.bicep' = {
 
 
 /////////////////////////////////////////////////////////////////////
-//  Managed Prometheus                                             //
+//  Observability Resources                                        //
 /////////////////////////////////////////////////////////////////////
 module prometheus 'aks_prometheus.bicep' = {
   name: '${configuration.name}-managed-prometheus'
@@ -641,11 +555,6 @@ module prometheus 'aks_prometheus.bicep' = {
   ]
 }
 
-
-
-/////////////////////////////////////////////////////////////////////
-//  Managed Grafana                                                //
-/////////////////////////////////////////////////////////////////////
 module grafana 'aks_grafana.bicep' = {
   name: '${configuration.name}-managed-grafana'
 
@@ -671,6 +580,177 @@ module grafana 'aks_grafana.bicep' = {
   ]
 }
 
+
+
+/////////////////////////////////////////////////////////////////////
+//  Software Resources                                             //
+/////////////////////////////////////////////////////////////////////
+module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
+  name: '${configuration.name}-storage'
+  params: {
+    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
+    location: location
+    skuName: configuration.storage.sku
+    accessTier: configuration.storage.tier
+    // Assign Tags
+    tags: {
+      layer: configuration.displayName
+      id: rg_unique_id
+    }
+
+    diagnosticSettings: [
+      {
+        workspaceResourceId: logAnalytics.outputs.resourceId
+      }
+    ]
+
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: 'Storage Blob Data Owner'
+        principalId: identity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: 'Storage Table Data Contributor'
+        principalId: identity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: 'Storage File Data SMB Share Contributor'
+        principalId: identity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+    ]
+
+    allowBlobPublicAccess: false
+    allowSharedKeyAccess: false
+    publicNetworkAccess: 'Enabled'
+
+    networkAcls: {
+      bypass: 'AzureServices'
+      defaultAction: 'Allow'
+      ipRules: [
+        {
+          value: natClusterIP.outputs.ipAddress
+        }
+      ]
+    }
+
+    managedIdentities: {
+      userAssignedResourceIds: [
+        identity.outputs.resourceId
+      ]
+    }
+
+    blobServices: {
+      containers: [
+        {
+          name: 'gitops'
+        }
+      ]
+    }
+  }
+}
+
+module gitOpsUpload './script-storage-upload/main.bicep' = {
+  name: '${configuration.name}-storage-gitops-upload'
+  params: {
+    storageAccountName: storageAccount.outputs.name
+    location: location
+    useExistingManagedIdentity: true
+    managedIdentityName: identity.outputs.name
+    existingManagedIdentitySubId: subscription().subscriptionId
+    existingManagedIdentityResourceGroupName:resourceGroup().name
+  }
+  dependsOn: [
+    storageAccount
+    identity
+  ]
+}
+
+module flux 'br/public:avm/res/kubernetes-configuration/extension:0.3.4' = {
+  name: '${configuration.name}-gitops'
+  params: {
+    // Required parameters
+    clusterName: managedCluster.outputs.name
+    location: location
+    extensionType: 'microsoft.flux'
+    name: 'flux'
+    
+    releaseNamespace: 'flux-system'
+    releaseTrain: 'Stable'
+    // Non-required parameters
+    configurationSettings: {
+      'multiTenancy.enforce': 'false'
+      'helm-controller.enabled': 'true'
+      'source-controller.enabled': 'true'
+      'kustomize-controller.enabled': 'true'
+      'notification-controller.enabled': 'true'
+      'image-automation-controller.enabled': 'false'
+      'image-reflector-controller.enabled': 'false'
+    }
+    fluxConfigurations: [
+      {
+        namespace: 'flux-system'
+        name: 'flux-system'
+        scope: 'cluster'
+        suspend: false
+        gitRepository: {
+          repositoryRef: {
+            branch: 'main'
+          }
+          sshKnownHosts: ''
+          syncIntervalInSeconds: 300
+          timeoutInSeconds: 300
+          url: 'https://github.com/danielscholl/cluster-paas'
+        }
+        kustomizations: {
+          global: {
+            path: './software/global'
+            dependsOn: []
+            syncIntervalInSeconds: 300
+            timeoutInSeconds: 300
+            validation: 'none'
+            prune: true
+          }
+          ...(stampTest ? {
+            stamptest: {
+              path: './software/stamp-test'
+              dependsOn: ['global']
+              syncIntervalInSeconds: 300
+              timeoutInSeconds: 300
+              validation: 'none'
+              prune: true
+            }
+          } : {})
+          ...(stampElastic ? {
+            stampelastic: {
+              path: './software/stamp-elastic'
+              dependsOn: ['global']
+              syncIntervalInSeconds: 300
+              timeoutInSeconds: 300
+              validation: 'none'
+              prune: true
+            }
+          } : {})
+        }
+      }
+    ]
+  }
+  dependsOn: [
+    managedCluster
+    gitOpsUpload
+    keyvault
+    registry
+  ]
+}
+
+module storageAcl './storage_acl.bicep' = {
+  name: '${configuration.name}-storage-acl'
+  params: {
+    storageName: storageAccount.outputs.name
+  }
+}
 
 //--------------Config Map---------------
 // SecretProviderClass --> tenantId, clientId, keyvaultName
@@ -717,7 +797,9 @@ module appConfigMap './aks-config-map/main.bicep' = {
     existingManagedIdentityResourceGroupName:resourceGroup().name
   }
   dependsOn: [
-    grafana
+    managedCluster
+    flux
+    appConfigProviderExtension
   ]
 }
 

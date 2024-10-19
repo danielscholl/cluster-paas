@@ -14,9 +14,6 @@ param filename string = 'main.zip'
 @description('Name of the file as it is stored in the share')
 param fileurl string = 'https://github.com/danielscholl/cluster-paas/archive/refs/heads/main.zip'
 
-@description('If the file is a tar.gz, should the contents be zipped when uploaded')
-param compress bool = false
-
 @description('The location of the Storage Account and where to deploy the module resources to')
 param location string = resourceGroup().location
 
@@ -46,16 +43,16 @@ param initialScriptDelay string = '30s'
 param cleanupPreference string = 'OnSuccess'
 
 
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-04-01' existing = {
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
   name: storageAccountName
 }
 
-resource newDepScriptId 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = if (!useExistingManagedIdentity) {
+resource newDepScriptId 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-07-31-preview' = if (!useExistingManagedIdentity) {
   name: managedIdentityName
   location: location
 }
 
-resource existingDepScriptId 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = if (useExistingManagedIdentity) {
+resource existingDepScriptId 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-07-31-preview' existing = if (useExistingManagedIdentity) {
   name: managedIdentityName
   scope: resourceGroup(existingManagedIdentitySubId, existingManagedIdentityResourceGroupName)
 }
@@ -91,7 +88,6 @@ resource uploadFile 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       { name: 'URL', value: fileurl }
       { name: 'CONTAINER', value: containerName }
       { name: 'initialDelay', value: initialScriptDelay }
-      { name: 'compress', value: string(compress) }
     ]
     scriptContent: loadTextContent('script.sh')
     cleanupPreference: cleanupPreference
