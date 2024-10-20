@@ -21,7 +21,7 @@ spec:
       count: 3
       volumeClaimTemplates:
         - metadata:
-            name: elasticsearch-data-{{ $i }}
+            name: elasticsearch-data
           spec:
             accessModes:
               - ReadWriteOnce
