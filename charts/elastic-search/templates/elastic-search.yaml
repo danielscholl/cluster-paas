@@ -5,8 +5,6 @@ kind: Elasticsearch
 metadata:
   name: elasticsearch-{{ $i }}
   namespace: {{ $.Release.Namespace }}
-  annotations:
-    eck.k8s.elastic.co/downward-node-labels: "topology.kubernetes.io/zone"
 spec:
   version: {{ $instance.version }}
   http:
@@ -18,7 +16,7 @@ spec:
         type: ClusterIP
   nodeSets:
     - name: default
-      count: 3
+      count: 1
       volumeClaimTemplates:
         - metadata:
             name: elasticsearch-data
@@ -32,8 +30,6 @@ spec:
       config:
         node.roles: [ "master", "data", "ingest" ]
         node.store.allow_mmap: false
-        node.attr.zone: "${ZONE}"
-        cluster.routing.allocation.awareness.attributes: k8s_node_name,zone
       podTemplate:
         spec:
           containers:
