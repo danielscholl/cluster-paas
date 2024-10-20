@@ -1,0 +1,17 @@
+{{- $namespace := .Release.Namespace }}
+apiVersion: azconfig.io/v1
+kind: AzureAppConfigurationProvider
+metadata:
+  name: {{ include "elastic-search.fullname" . }}-values
+  namespace: {{ $namespace }}
+spec:
+  endpoint: {{ .Values.azure.configEndpoint }}
+  target:
+    configMapName: configmap-values
+  auth:
+    workloadIdentity:
+      serviceAccountName: workload-identity-sa
+  configuration:
+     selectors:
+        - keyFilter: "*"
+          labelFilter: "elastic-search"

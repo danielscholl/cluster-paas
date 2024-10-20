@@ -9,22 +9,34 @@ param location string = resourceGroup().location
 @description('The object ID of the user to assign the cluster admin role to.')
 param userObjectId string
 
-@description('Load Service Mesh')
-param enableMesh bool = false
-
-@description('Enable PaaS pool')
-param enablePaasPool bool = false
-
 @description('Deploy Sample')
 param stampTest bool = false
 
-@description('Deploy Elastic')
-param stampElastic bool = true
+
+
+@description('Number of Elastic Instances')
+param elasticInstances int = 1
+
+
+@allowed([
+  '8.15.3'
+  '8.14.3'
+  '7.17.24'
+  '7.16.3'
+])
+param elasticVersion string = '8.15.3'
 
 @description('Date Stamp - Used for sentinel in configuration store.')
 param dateStamp string = utcNow()
 
 
+var stampElastic = elasticInstances > 0 ? true : false
+
+@description('Enable PaaS pool')
+var enablePaasPool = false
+
+@description('Load Service Mesh')
+var enableMesh = false
 
 @description('Internal Configuration Object')
 var configuration = {
@@ -261,18 +273,6 @@ module managedCluster './managed-cluster/main.bicep' = {
     istioIngressGatewayEnabled: enableMesh ? true : false
     istioIngressGatewayType: enableMesh ? 'External' : null
 
-    // Software Configurations
-    // fluxExtension: {
-    //   configurationSettings: {
-    //     'multiTenancy.enforce': 'false'
-    //     'helm-controller.enabled': 'true'
-    //     'source-controller.enabled': 'true'
-    //     'kustomize-controller.enabled': 'true'
-    //     'notification-controller.enabled': 'true'
-    //     'image-automation-controller.enabled': 'false'
-    //     'image-reflector-controller.enabled': 'false'
-    //   }
-    // }
   }
 }
 
@@ -399,6 +399,18 @@ var configmapServices = [
     value: keyvault.outputs.uri
     contentType: 'text/plain'
     label: 'configmap-services'
+  }
+  {
+    name: 'elastic-instances'
+    value: elasticInstances
+    contentType: 'text/plain'
+    label: 'elastic-search'
+  }
+  {
+    name: 'elastic-version'
+    value: elasticVersion
+    contentType: 'text/plain'
+    label: 'elastic-search'
   }
 ]
 
@@ -708,7 +720,7 @@ module flux 'br/public:avm/res/kubernetes-configuration/extension:0.3.4' = {
             prune: true
           }
           ...(stampTest ? {
-            stamptest: {
+            stamp_test: {
               path: './software/stamp-test'
               dependsOn: ['global']
               syncIntervalInSeconds: 300
@@ -718,7 +730,7 @@ module flux 'br/public:avm/res/kubernetes-configuration/extension:0.3.4' = {
             }
           } : {})
           ...(stampElastic ? {
-            stampelastic: {
+            stamp_elastic: {
               path: './software/stamp-elastic'
               dependsOn: ['global']
               syncIntervalInSeconds: 300

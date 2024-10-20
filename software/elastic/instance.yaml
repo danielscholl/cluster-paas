@@ -2,7 +2,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
   name: elastic-search
-  namespace: flux-system
+  namespace: default
 spec:
   targetNamespace: elastic
   releaseName: elastic-search
@@ -21,6 +21,10 @@ spec:
     remediation:
       retries: 3
   interval: 10m0s
+  valuesFrom:
+    - kind: ConfigMap
+      name: config-map-values
+      valuesKey: values.yaml
   values:
     elasticsearch:
       instances:
