@@ -19,7 +19,17 @@ spec:
         args:
         - -c
         - |
-          tdnf install -y curl jq && \
+          echo "Installing curl and jq..."
+          tdnf install -y curl jq
+          echo "Installation complete."
+          
+          echo "\nEnvironment variables:"
+          env
+          
+          echo "\nContents of /mnt directory:"
+          ls -R /mnt
+          
+          echo "\nElasticsearch URL:"
           echo "http://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200/_cluster/health"
         env:
         - name: NAMESPACE
