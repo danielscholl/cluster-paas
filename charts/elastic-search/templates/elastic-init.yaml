@@ -107,7 +107,7 @@ data:
     else
       # Create the custom role
       create_role_response=$(curl -s -k -o /dev/null -w "%{http_code}" -X POST "${ES_SERVICE_URL}/_security/role/$CUSTOM_ELASTIC_ROLE" \
-        -u "elastic:$(cat /mnt/elasticsearch-{{ $i }}-es-elastic-user/elastic)" \
+        -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" \
         -H "Content-Type: application/json" \
         -d "$ROLE_JSON")
 
@@ -120,14 +120,14 @@ data:
     fi
 
     # Check if the new user already exists
-    user_response=$(curl -s -k -o /dev/null -w "%{http_code}" -u "elastic:$(cat /mnt/elasticsearch-{{ $i }}-es-elastic-user/elastic)" \
+    user_response=$(curl -s -k -o /dev/null -w "%{http_code}" -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" \
       "${ES_SERVICE_URL}/_security/user/$NEW_USERNAME")
 
     if [ "$user_response" -eq 200 ]; then
       echo "User $NEW_USERNAME already exists. Updating password."
       # Update the existing user's password
       update_password_response=$(curl -s -k -o /dev/null -w "%{http_code}" -X POST "${ES_SERVICE_URL}/_security/user/$NEW_USERNAME/_password" \
-        -u "elastic:$(cat /mnt/elasticsearch-{{ $i }}-es-elastic-user/elastic)" \
+        -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" \
         -H "Content-Type: application/json" \
         -d "{\"password\":\"$NEW_PASSWORD\"}")
 
