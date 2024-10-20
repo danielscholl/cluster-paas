@@ -1,0 +1,12 @@
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+fullnameOverride: my-namespace
+
+elasticsearch:
+  instances:
+    - version: 8.7.1
+      storage:
+        size: 30Gi
+  storage:
+    storageClass: managed-premium

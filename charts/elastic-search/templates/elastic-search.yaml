@@ -1,0 +1,47 @@
+{{- range $i, $instance := .Values.elasticsearch.instances }}
+---
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearch-{{ $i }}
+  namespace: {{ $.Release.Namespace }}
+  annotations:
+    eck.k8s.elastic.co/downward-node-labels: "topology.kubernetes.io/zone"
+spec:
+  version: {{ $instance.version }}
+  http:
+    tls:
+      selfSignedCertificate:
+        disabled: true
+    service:
+      spec:
+        type: ClusterIP
+  nodeSets:
+    - name: default
+      count: 3
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data-{{ $i }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: {{ $instance.storage.size | default "30Gi" }}
+            storageClassName: {{ $.Values.elasticsearch.storage.storageClass | default "managed-premium" }}
+      config:
+        node.roles: [ "master", "data", "ingest" ]
+        node.store.allow_mmap: false
+        node.attr.zone: "${ZONE}"
+        cluster.routing.allocation.awareness.attributes: k8s_node_name,zone
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              # Remove the ES_JAVA_OPTS environment variable
+              # env:
+              #   - name: ES_JAVA_OPTS
+              #     value: "-Xms1g -Xmx1g"
+              # If you need to set other environment variables, you can keep the 'env' section
+              # and just remove the ES_JAVA_OPTS entry
+{{- end }}

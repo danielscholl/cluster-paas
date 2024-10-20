@@ -1,0 +1,9 @@
+apiVersion: v2
+name: elastic-search
+type: application
+description: Installs Elastic Search Instances
+version: 0.0.1
+appVersion: 0.0.1
+maintainers:
+  - name: danielscholl
+    url: https://github.com/danielscholl
