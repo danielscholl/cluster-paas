@@ -402,7 +402,7 @@ var configmapServices = [
   }
   {
     name: 'elastic-instances'
-    value: elasticInstances
+    value: string(elasticInstances)
     contentType: 'text/plain'
     label: 'elastic-search'
   }

@@ -228,6 +228,7 @@ module configurationStore_keyValues './.bicep/key_values.bicep' = [
       appConfigurationName: configurationStore.name
       name: keyValue.name
       value: keyValue.value
+      label: keyValue.?label ?? ''
       contentType: keyValue.?contentType
       tags: keyValue.?tags ?? tags
     }
