@@ -720,7 +720,7 @@ module flux 'br/public:avm/res/kubernetes-configuration/extension:0.3.4' = {
             prune: true
           }
           ...(stampTest ? {
-            stamp_test: {
+            stamptest: {
               path: './software/stamp-test'
               dependsOn: ['global']
               syncIntervalInSeconds: 300
@@ -730,7 +730,7 @@ module flux 'br/public:avm/res/kubernetes-configuration/extension:0.3.4' = {
             }
           } : {})
           ...(stampElastic ? {
-            stamp_elastic: {
+            stampelastic: {
               path: './software/stamp-elastic'
               dependsOn: ['global']
               syncIntervalInSeconds: 300

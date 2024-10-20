@@ -23,7 +23,7 @@ spec:
   interval: 10m0s
   valuesFrom:
     - kind: ConfigMap
-      name: config-map-values
+      name: system-values
       valuesKey: values.yaml
   values:
     elasticsearch:
