@@ -28,7 +28,7 @@ spec:
               fieldPath: metadata.namespace
         volumeMounts:
         - name: es-basic-auth
-          mountPath: /mnt/elasticsearch-{{ $i }}-es-elastic-user
+          mountPath: /mnt/elasticsearch-es-elastic-user
       containers:
       - name: elastic-user
         image: mcr.microsoft.com/cbl-mariner/base/core:2.0
@@ -48,7 +48,7 @@ spec:
         - name: azure-keyvault
           mountPath: /mnt/azure-keyvault
         - name: es-basic-auth
-          mountPath: /mnt/elasticsearch-{{ $i }}-es-elastic-user
+          mountPath: /mnt/elasticsearch-es-elastic-user
       restartPolicy: Never
       volumes:
       - name: es-basic-auth
