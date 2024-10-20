@@ -1,3 +1,4 @@
+{{- $namespace := .Release.Namespace -}}
 {{- range $i, $instance := .Values.elasticsearch.instances }}
 ---
 apiVersion: batch/v1
@@ -19,18 +20,16 @@ spec:
         args:
         - -c
         - |
-          echo "Installing curl and jq..."
-          tdnf install -y curl jq
-          echo "Installation complete."
-          
-          echo "\nEnvironment variables:"
-          env
-          
-          echo "\nContents of /mnt directory:"
-          ls -R /mnt
-          
-          echo "\nElasticsearch URL:"
-          echo "http://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200/_cluster/health"
+          tdnf install -y curl jq && \
+          while true; do
+            health_status=$(curl -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" -k -s "http://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200/_cluster/health" | jq -r '.status')
+            if [ "$health_status" = "green" ]; then
+              echo "Cluster health is green."
+              exit 0
+            fi
+            echo "Cluster health is $health_status. Waiting for it to be green..."
+            sleep 30
+          done
         env:
         - name: NAMESPACE
           valueFrom:
