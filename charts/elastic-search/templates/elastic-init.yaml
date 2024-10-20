@@ -99,7 +99,7 @@ data:
     ES_SERVICE_URL="http://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200"
 
     # Check if the custom role already exists
-    role_response=$(curl -s -k -o /dev/null -w "%{http_code}" -w "%{http_code}" -u "elastic:$(cat /mnt/elasticsearch-{{ $i }}-es-elastic-user/elastic)" \
+    role_response=$(curl -s -k -o /dev/null -w "%{http_code}" -w "%{http_code}" -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" \
       "${ES_SERVICE_URL}/_security/role/$CUSTOM_ELASTIC_ROLE")
 
     if [ "$role_response" -eq 200 ]; then
@@ -150,7 +150,7 @@ data:
     else
       # Create the new user with the custom role
       create_user_response=$(curl -s -k -o /dev/null -w "%{http_code}" -X POST "${ES_SERVICE_URL}/_security/user/$NEW_USERNAME" \
-        -u "elastic:$(cat /mnt/elasticsearch-{{ $i }}-es-elastic-user/elastic)" \
+        -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" \
         -H "Content-Type: application/json" \
         -d "$USER_JSON")
 
