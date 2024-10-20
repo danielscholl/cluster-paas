@@ -85,19 +85,6 @@ metadata:
 data:
   user-setup.sh: |
     #!/bin/sh
-    set -e
-    echo "Starting user setup..."
-    # Add your user setup logic here
-    echo "User setup completed."
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: user-setup-orig-{{ $i }}
-  namespace: {{ $.Release.Namespace }}
-data:
-  user-setup.sh: |
-    #!/bin/sh
 
     # Read the new user's username and password from Azure KeyVault
     NEW_USERNAME=$(cat /mnt/azure-keyvault/elastic-username)
