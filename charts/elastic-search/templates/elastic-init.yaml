@@ -20,15 +20,7 @@ spec:
         - -c
         - |
           tdnf install -y curl jq && \
-          while true; do
-            health_status=$(curl -u "elastic:$(cat /mnt/elasticsearch-{{ $i }}-es-elastic-user/elastic)" -k -s "http://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200/_cluster/health" | jq -r '.status')
-            if [ "$health_status" = "green" ]; then
-              echo "Cluster health is green."
-              exit 0
-            fi
-            echo "Cluster health is $health_status. Waiting for it to be green..."
-            sleep 30
-          done
+          echo "http://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200/_cluster/health"
         env:
         - name: NAMESPACE
           valueFrom:
@@ -71,12 +63,27 @@ spec:
       - name: script-config
         configMap:
           name: user-setup
-
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: user-setup-{{ $i }}
+  namespace: {{ $.Release.Namespace }}
+data:
+  user-setup.sh: |
+    #!/bin/sh
+
+    # Read the new user's username and password from Azure KeyVault
+    NEW_USERNAME=$(cat /mnt/azure-keyvault/elastic-username)
+    NEW_PASSWORD=$(cat /mnt/azure-keyvault/elastic-password)
+
+    echo $NEW_USERNAME
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-setup-orig-{{ $i }}
   namespace: {{ $.Release.Namespace }}
 data:
   user-setup.sh: |
