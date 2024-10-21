@@ -73,7 +73,7 @@ spec:
           driver: secrets-store.csi.k8s.io
           readOnly: true
           volumeAttributes:
-            secretProviderClass: keyvault-credentials-keyvault
+            secretProviderClass: keyvault-secrets-keyvault
       - name: script-config
         configMap:
           name: user-setup-{{ $i }}
