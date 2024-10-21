@@ -9,6 +9,10 @@ param location string = resourceGroup().location
 @description('The object ID of the user to assign a cluster admin role for.')
 param userObjectId string
 
+@description('Source type for Flux configuration: "git" or "azureblob"')
+@allowed(['git', 'azureblob'])
+param fluxSource string = 'git'
+
 @description('Enable Backup')
 param enableBackup bool = true
 
@@ -751,7 +755,8 @@ module flux 'br/public:avm/res/kubernetes-configuration/extension:0.3.4' = {
         name: 'flux-system'
         scope: 'cluster'
         suspend: false
-        gitRepository: {
+        sourceKind: fluxSource == 'git' ? 'GitRepository' : 'Bucket'
+        gitRepository: fluxSource == 'git' ? {
           repositoryRef: {
             branch: 'main'
           }
@@ -759,7 +764,17 @@ module flux 'br/public:avm/res/kubernetes-configuration/extension:0.3.4' = {
           syncIntervalInSeconds: 300
           timeoutInSeconds: 300
           url: 'https://github.com/danielscholl/cluster-paas'
-        }
+        } : null
+        bucket: fluxSource == 'azureblob' ? {
+          bucketName: 'gitops'
+          provider: 'azure'
+          interval: '1m'
+          accessFrom: {
+            kind: 'managedIdentity'
+            name: identity.outputs.name
+          }
+          endpoint: storageAccount.outputs.primaryBlobEndpoint
+        } : null
         kustomizations: {
           global: {
             path: './software/global'
@@ -798,6 +813,8 @@ module flux 'br/public:avm/res/kubernetes-configuration/extension:0.3.4' = {
     gitOpsUpload
     keyvault
     registry
+    identity
+    storageAccount
   ]
 }
 

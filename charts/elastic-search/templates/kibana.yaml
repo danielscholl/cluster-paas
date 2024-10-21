@@ -24,7 +24,7 @@ spec:
         - |
           tdnf install -y curl jq && \
           while true; do
-            health_status=$(curl -u "${ELASTICSEARCH_USERNAME}:${ELASTICSEARCH_PASSWORD}" -k -s "https://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200/_cluster/health" | jq -r '.status')
+            health_status=$(curl -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" -k -s "https://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200/_cluster/health" | jq -r '.status')
             if [ "$health_status" = "green" ]; then
               echo "Cluster health is green."
               exit 0
@@ -37,16 +37,9 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: ELASTICSEARCH_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: elasticsearch-credentials
-              key: username-{{ $i }}
-        - name: ELASTICSEARCH_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: elasticsearch-credentials
-              key: password-{{ $i }}
+        volumeMounts:
+        - name: es-basic-auth
+          mountPath: /mnt/elasticsearch-es-elastic-user
       containers:
         - name: kibana
           env:
@@ -67,6 +60,10 @@ spec:
                 secretKeyRef:
                   name: elasticsearch-credentials
                   key: key-{{ $i }}
+      volumes:
+      - name: es-basic-auth
+        secret:
+          secretName: elasticsearch-{{ $i }}-es-elastic-user
 ---
 apiVersion: v1
 kind: ConfigMap
