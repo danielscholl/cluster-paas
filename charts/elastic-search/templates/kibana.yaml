@@ -15,6 +15,38 @@ spec:
     elasticsearch.serviceAccountToken: null  # Explicitly set to null to disable
   podTemplate:
     spec:
+      initContainers:
+      - name: health-check
+        image: mcr.microsoft.com/cbl-mariner/base/core:2.0
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          tdnf install -y curl jq && \
+          while true; do
+            health_status=$(curl -u "${ELASTICSEARCH_USERNAME}:${ELASTICSEARCH_PASSWORD}" -k -s "https://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200/_cluster/health" | jq -r '.status')
+            if [ "$health_status" = "green" ]; then
+              echo "Cluster health is green."
+              exit 0
+            fi
+            echo "Cluster health is $health_status. Waiting for it to be green..."
+            sleep 30
+          done
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: ELASTICSEARCH_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: elasticsearch-credentials
+              key: username-{{ $i }}
+        - name: ELASTICSEARCH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: elasticsearch-credentials
+              key: password-{{ $i }}
       containers:
         - name: kibana
           env:
@@ -24,17 +56,17 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: elasticsearch-credentials
-                  key: elastic-username-{{ $i }}
+                  key: username-{{ $i }}
             - name: ELASTICSEARCH_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: elasticsearch-credentials
-                  key: elastic-password-{{ $i }}
+                  key: password-{{ $i }}
             - name: XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY
               valueFrom:
                 secretKeyRef:
                   name: elasticsearch-credentials
-                  key: elastic-key-{{ $i }}
+                  key: key-{{ $i }}
 ---
 apiVersion: v1
 kind: ConfigMap
