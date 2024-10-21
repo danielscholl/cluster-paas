@@ -15,9 +15,11 @@ param enableBackup bool = false
 @description('Deploy Sample')
 param stampTest bool = false
 
-@description('Number of Elastic Instances')
-param elasticInstances int = 1
+@description('Number of Instances')
+param instances int = 1
 
+@description('Enable Elastic')
+param stampElastic bool = true
 
 @allowed([
   '8.15.3'
@@ -30,9 +32,6 @@ param elasticVersion string = '8.15.3'
 @description('Date Stamp - Used for sentinel in configuration store.')
 param dateStamp string = utcNow()
 
-
-@description('Enable Elastic')
-var stampElastic = elasticInstances > 0 ? true : false
 
 @description('Enable PaaS pool')
 var enablePaasPool = false
@@ -420,13 +419,13 @@ var configmapServices = [
     label: 'system-values'
   }
   {
-    name: 'elasticInstances'
-    value: string(elasticInstances)
+    name: 'instances'
+    value: string(instances)
     contentType: 'application/json'
     label: 'elastic-values'
   }
   {
-    name: 'elasticVersion'
+    name: 'version'
     value: string(elasticVersion)
     contentType: 'text/plain'
     label: 'elastic-values'
@@ -523,7 +522,7 @@ var staticSecrets = [
 ]
 
 // Elastic secrets, flattened to individual objects
-var elasticSecrets = [for i in range(0, elasticInstances): [
+var elasticSecrets = [for i in range(0, instances): [
   {
     secretName: 'elastic-username-${i}'
     secretValue: 'elastic'
@@ -852,6 +851,7 @@ values.yaml: |
     configEndpoint: {2}
     keyvaultUri: {3}
     keyvaultName: {4}
+  iterateCount: {5}
   '''
 }
 
@@ -871,7 +871,8 @@ module appConfigMap './aks-config-map/main.bicep' = {
              identity.outputs.clientId,
              configurationStore.outputs.endpoint,
              keyvault.outputs.uri,
-             keyvault.outputs.name)
+             keyvault.outputs.name,
+             instances)
     ]
 
     newOrExistingManagedIdentity: 'existing'
