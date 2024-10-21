@@ -505,6 +505,8 @@ var staticSecrets = [
   }
 ]
 
+var baseElasticKey = '${uniqueString(resourceGroup().id, userObjectId, location)}${uniqueString(subscription().id, deployment().name)}'
+
 // Elastic secrets, flattened to individual objects
 var elasticSecrets = [for i in range(0, instances): [
   {
@@ -517,7 +519,7 @@ var elasticSecrets = [for i in range(0, instances): [
   }
   {
     secretName: 'elastic-key-${i}'
-    secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltkey${i}'), 0, 13)
+    secretValue: substring('${baseElasticKey}${baseElasticKey}${baseElasticKey}', 0, 32)
   }
 ]]
 
@@ -582,13 +584,24 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
 
 
 /////////////////////////////////////////////////////////////////////
-//  App Configuration Provider                                     //
+//  AKS Extensions                                                 //
 /////////////////////////////////////////////////////////////////////
 // AKS has an extension for App Configuration but installing with Helm for now.
-module appConfigProviderExtension './aks_appconfig_extension.bicep' = {
+module appConfigExtension './aks_appconfig_extension.bicep' = {
   name: '${configuration.name}-appconfig-provider'
   params: {
     clusterName: managedCluster.outputs.name
+  }
+  dependsOn: [
+    managedCluster
+  ]
+}
+
+module backupExtension './aks_backup_extension.bicep' = {
+  name: '${configuration.name}-appconfig-provider'
+  params: {
+    clusterName: managedCluster.outputs.name
+    storageAccountName: storageAccount.outputs.name
   }
   dependsOn: [
     managedCluster
@@ -706,6 +719,9 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
       containers: [
         {
           name: 'gitops'
+        }
+        {
+          name: 'backup'
         }
       ]
     }
@@ -880,7 +896,6 @@ module appConfigMap './aks-config-map/main.bicep' = {
   dependsOn: [
     managedCluster
     flux
-    appConfigProviderExtension
+    appConfigExtension
   ]
 }
-
