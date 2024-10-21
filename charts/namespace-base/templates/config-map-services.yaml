@@ -7,14 +7,14 @@ metadata:
 spec:
   endpoint: {{ .Values.azure.configEndpoint }}
   target:
-    configMapName: configmap-services
+    configMapName: system-values
   auth:
     workloadIdentity:
       serviceAccountName: workload-identity-sa
   configuration:
       selectors:
         - keyFilter: "*"
-          labelFilter: "configmap-services"
+          labelFilter: "system-values"
       refresh:
         enabled: true
         interval: 1m

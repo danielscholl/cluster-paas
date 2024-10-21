@@ -3,10 +3,11 @@
 
 fullnameOverride: elastic-search
 
-elasticsearch:
-  instances:
-    - version: 8.7.1
-      storage:
-        size: 30Gi
-  storage:
-    storageClass: managed-premium
+azure:
+  configEndpoint: "https://el-config.azconfig.io"
+
+elasticInstances: 1
+elasticVersion: "8.15.3"
+storageSize: "30Gi"
+storageClass: "managed-premium"
+

@@ -1,4 +1,5 @@
-{{- range $i, $instance := .Values.elasticsearch.instances }}
+{{- $elasticInstances := .Values.elasticInstances | default 1 | int }}
+{{- range $i := until $elasticInstances }}
 ---
 apiVersion: elasticsearch.k8s.elastic.co/v1
 kind: Elasticsearch
@@ -6,7 +7,7 @@ metadata:
   name: elasticsearch-{{ $i }}
   namespace: {{ $.Release.Namespace }}
 spec:
-  version: {{ $instance.version }}
+  version: {{ $.Values.elasticVersion }}
   http:
     tls:
       selfSignedCertificate:
@@ -25,8 +26,8 @@ spec:
               - ReadWriteOnce
             resources:
               requests:
-                storage: {{ $instance.storage.size | default "30Gi" }}
-            storageClassName: {{ $.Values.elasticsearch.storage.storageClass | default "managed-premium" }}
+                storage: {{ $.Values.storageSize }}
+            storageClassName: {{ $.Values.storageClass | default "managed-premium" }}
       config:
         node.roles: [ "master", "data", "ingest" ]
         node.store.allow_mmap: false

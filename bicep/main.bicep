@@ -375,7 +375,7 @@ module registry 'br/public:avm/res/container-registry/registry:0.5.1' = {
 /////////////////////////////////////////////////////////////////////
 //  Configuration Resources                                        //
 /////////////////////////////////////////////////////////////////////
-@description('App Configuration Values for configmap-services')
+@description('App Configuration Values')
 var configmapServices = [
   {
     name: 'sentinel'
@@ -386,29 +386,41 @@ var configmapServices = [
     name: 'tenant_id'
     value: subscription().tenantId
     contentType: 'text/plain'
-    label: 'configmap-services'
+    label: 'system-values'
   }
   {
     name: 'azure_msi_client_id'
     value: identity.outputs.clientId
     contentType: 'text/plain'
-    label: 'configmap-services'
+    label: 'system-values'
   }
   {
     name: 'keyvault_uri'
     value: keyvault.outputs.uri
     contentType: 'text/plain'
-    label: 'configmap-services'
+    label: 'system-values'
   }
   {
-    name: 'elastic-instances'
+    name: 'elasticInstances'
     value: string(elasticInstances)
     contentType: 'text/plain'
     label: 'elastic-search'
   }
   {
-    name: 'elastic-version'
-    value: elasticVersion
+    name: 'elasticVersion'
+    value: string(elasticVersion)
+    contentType: 'text/plain'
+    label: 'elastic-search'
+  }
+  {
+    name: 'storageSize'
+    value: '30Gi'
+    contentType: 'text/plain'
+    label: 'elastic-search'
+  }
+  {
+    name: 'storageClass'
+    value: 'managed-premium'
     contentType: 'text/plain'
     label: 'elastic-search'
   }

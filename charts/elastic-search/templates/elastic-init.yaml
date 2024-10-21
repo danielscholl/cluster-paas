@@ -1,5 +1,6 @@
 {{- $namespace := .Release.Namespace -}}
-{{- range $i, $instance := .Values.elasticsearch.instances }}
+{{- $elasticInstances := .Values.elasticInstances | default 1 | int }}
+{{- range $i := until $elasticInstances }}
 ---
 apiVersion: batch/v1
 kind: Job
