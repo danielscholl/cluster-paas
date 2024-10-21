@@ -9,10 +9,11 @@ param location string = resourceGroup().location
 @description('The object ID of the user to assign the cluster admin role to.')
 param userObjectId string
 
+@description('Enable Backup')
+param enableBackup bool = false
+
 @description('Deploy Sample')
 param stampTest bool = false
-
-
 
 @description('Number of Elastic Instances')
 param elasticInstances int = 1
@@ -30,6 +31,7 @@ param elasticVersion string = '8.15.3'
 param dateStamp string = utcNow()
 
 
+@description('Enable Elastic')
 var stampElastic = elasticInstances > 0 ? true : false
 
 @description('Enable PaaS pool')
@@ -108,6 +110,23 @@ module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.7.0' = {
   }
 }
 
+
+
+/////////////////////////////////////////////////////////////////////
+//  Monitoring Resources                                           //
+/////////////////////////////////////////////////////////////////////
+module backupVault 'br/public:avm/res/data-protection/backup-vault:0.7.0' = if (enableBackup) {
+  name: '${configuration.name}-backup'
+  params: {
+    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
+    location: location
+    // Assign Tags
+    tags: {
+      layer: configuration.displayName
+      id: rg_unique_id
+    }
+  }
+}
 
 
 /////////////////////////////////////////////////////////////////////
@@ -402,7 +421,7 @@ var configmapServices = [
   }
   {
     name: 'elasticInstances'
-    value: elasticInstances
+    value: string(elasticInstances)
     contentType: 'application/json'
     label: 'elastic-values'
   }
