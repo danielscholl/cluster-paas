@@ -435,6 +435,14 @@ module configurationStore './app-configuration/main.bicep' = {
       }
     ]
 
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: 'App Configuration Data Reader'
+        principalId: identity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+    ]
+
     enablePurgeProtection: false
     disableLocalAuth: true
 
