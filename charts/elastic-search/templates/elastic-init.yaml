@@ -87,6 +87,9 @@ data:
   user-setup.sh: |
     #!/bin/sh
 
+    # Read the elastic user password (this should be the built-in superuser)
+    ELASTIC_PASSWORD=$(cat /mnt/elasticsearch-es-elastic-user/elastic)
+
     # Read the new user's username and password from Azure KeyVault
     NEW_USERNAME=$(cat /mnt/azure-keyvault/elastic-username-{{ $i }})
     NEW_PASSWORD=$(cat /mnt/azure-keyvault/elastic-password-{{ $i }})
@@ -99,7 +102,7 @@ data:
     # Elasticsearch service URL
     ES_SERVICE_URL="http://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200"
 
-    # Use $ELASTIC_PASSWORD (passed from the container environment)
+    # Use the built-in elastic user for authentication
     ELASTIC_AUTH="elastic:$ELASTIC_PASSWORD"
 
     # Check if the custom role already exists

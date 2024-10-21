@@ -25,6 +25,7 @@ param stampElastic bool = true
   '8.15.3'
   '8.14.3'
   '7.17.24'
+  '7.17.22'
   '7.16.3'
 ])
 param elasticVersion string = '8.15.3'
