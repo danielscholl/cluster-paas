@@ -402,8 +402,8 @@ var configmapServices = [
   }
   {
     name: 'elasticInstances'
-    value: string(elasticInstances)
-    contentType: 'text/plain'
+    value: elasticInstances
+    contentType: 'application/json'
     label: 'elastic-values'
   }
   {
@@ -467,8 +467,32 @@ module configurationStore './app-configuration/main.bicep' = {
 }
 
 //  Vault Resources
-@description('The list of secrets to persist to the Key Vault')
-var vaultSecrets = [ 
+// @description('The list of secrets to persist to the Key Vault')
+// var vaultSecrets = [ 
+//   {
+//     secretName: 'tenant-id'
+//     secretValue: subscription().tenantId
+//   }
+//   {
+//     secretName: 'subscription-id'
+//     secretValue: subscription().subscriptionId
+//   }
+//   {
+//     secretName: 'elastic-username'
+//     secretValue: 'elastic'
+//   }
+//   {
+//     secretName: 'elastic-password'
+//     secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltpass'), 0, 13)
+//   }
+//   {
+//     secretName: 'elastic-key'
+//     secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltkey'), 0, 13)
+//   }
+// ]
+
+// Static secrets
+var staticSecrets = [
   {
     secretName: 'tenant-id'
     secretValue: subscription().tenantId
@@ -477,19 +501,27 @@ var vaultSecrets = [
     secretName: 'subscription-id'
     secretValue: subscription().subscriptionId
   }
+]
+
+// Elastic secrets, flattened to individual objects
+var elasticSecrets = [for i in range(0, elasticInstances): [
   {
-    secretName: 'elastic-username'
+    secretName: 'elastic-username-${i}'
     secretValue: 'elastic'
   }
   {
-    secretName: 'elastic-password'
-    secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltpass'), 0, 13)
+    secretName: 'elastic-password-${i}'
+    secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltpass${i}'), 0, 13)
   }
   {
-    secretName: 'elastic-key'
-    secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltkey'), 0, 13)
+    secretName: 'elastic-key-${i}'
+    secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltkey${i}'), 0, 13)
   }
-]
+]]
+
+// Use array concatenation to join the static and elastic secrets
+var vaultSecrets = union(staticSecrets, flatten(elasticSecrets))
+
 
 module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
   name: '${configuration.name}-keyvault'

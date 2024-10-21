@@ -2,10 +2,13 @@ azure:
   clientId: 
   keyvaultName: 
   tenantId: 
+identity: true
+iterateCount: 1
 secrets:
   - secretName:                                   # Kubernetes secret name
     data:
       - key:                                      # Kubernetes secret key
         vaultSecret:                              # KeyVault secret name
+        iterate: true
       - key:                                      # Kubernetes secret key   
         vaultSecret:                              # KeyVault secret name
