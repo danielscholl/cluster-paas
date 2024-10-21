@@ -10,7 +10,7 @@ param location string = resourceGroup().location
 param userObjectId string
 
 @description('Enable Backup')
-param enableBackup bool = false
+param enableBackup bool = true
 
 @description('Deploy Sample')
 param stampTest bool = false
@@ -485,30 +485,6 @@ module configurationStore './app-configuration/main.bicep' = {
   ]
 }
 
-//  Vault Resources
-// @description('The list of secrets to persist to the Key Vault')
-// var vaultSecrets = [ 
-//   {
-//     secretName: 'tenant-id'
-//     secretValue: subscription().tenantId
-//   }
-//   {
-//     secretName: 'subscription-id'
-//     secretValue: subscription().subscriptionId
-//   }
-//   {
-//     secretName: 'elastic-username'
-//     secretValue: 'elastic'
-//   }
-//   {
-//     secretName: 'elastic-password'
-//     secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltpass'), 0, 13)
-//   }
-//   {
-//     secretName: 'elastic-key'
-//     secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltkey'), 0, 13)
-//   }
-// ]
 
 // Static secrets
 var staticSecrets = [
