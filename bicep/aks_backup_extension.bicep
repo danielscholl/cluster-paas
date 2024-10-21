@@ -18,11 +18,13 @@ resource azureAksBackupExtension 'Microsoft.KubernetesConfiguration/extensions@2
     autoUpgradeMinorVersion: true
     releaseTrain: 'stable'
     extensionType: 'microsoft.dataprotection.kubernetes'
+    
     configurationSettings: {
-      blobContainer: blobContainer
-      storageAccount: storageAccountName
-      storageAccountResourceGroup: resourceGroup().name
-      storageAccountSubscriptionId: subscription().subscriptionId
+      'configuration.backupStorageLocation.bucket': blobContainer
+      'configuration.backupStorageLocation.config.storageAccount': storageAccountName
+      'configuration.backupStorageLocation.config.resourceGroup': resourceGroup().name
+      'configuration.backupStorageLocation.config.subscriptionId': subscription().subscriptionId
+      'credentials.tenantId': tenant().tenantId
     }
   }
 }

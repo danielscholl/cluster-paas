@@ -120,23 +120,6 @@ module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.7.0' = {
 
 
 /////////////////////////////////////////////////////////////////////
-//  Monitoring Resources                                           //
-/////////////////////////////////////////////////////////////////////
-module backupVault 'br/public:avm/res/data-protection/backup-vault:0.7.0' = if (enableBackup) {
-  name: '${configuration.name}-backup'
-  params: {
-    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
-    location: location
-    // Assign Tags
-    tags: {
-      layer: configuration.displayName
-      id: rg_unique_id
-    }
-  }
-}
-
-
-/////////////////////////////////////////////////////////////////////
 //  Cluster Resources                                              //
 /////////////////////////////////////////////////////////////////////
 // AVM doesn't support things like AKS Automatic SKU, so we use a custom module.
@@ -511,7 +494,7 @@ var baseElasticKey = '${uniqueString(resourceGroup().id, userObjectId, location)
 var elasticSecrets = [for i in range(0, instances): [
   {
     secretName: 'elastic-username-${i}'
-    secretValue: 'elastic'
+    secretValue: 'elastic-user'
   }
   {
     secretName: 'elastic-password-${i}'
@@ -586,9 +569,8 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
 /////////////////////////////////////////////////////////////////////
 //  AKS Extensions                                                 //
 /////////////////////////////////////////////////////////////////////
-// AKS has an extension for App Configuration but installing with Helm for now.
 module appConfigExtension './aks_appconfig_extension.bicep' = {
-  name: '${configuration.name}-appconfig-provider'
+  name: '${configuration.name}-appconfig-extension'
   params: {
     clusterName: managedCluster.outputs.name
   }
@@ -598,7 +580,7 @@ module appConfigExtension './aks_appconfig_extension.bicep' = {
 }
 
 module backupExtension './aks_backup_extension.bicep' = {
-  name: '${configuration.name}-appconfig-provider'
+  name: '${configuration.name}-backup-extension'
   params: {
     clusterName: managedCluster.outputs.name
     storageAccountName: storageAccount.outputs.name
@@ -725,6 +707,30 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
         }
       ]
     }
+  }
+}
+
+/////////////////////////////////////////////////////////////////////
+//  Monitoring Resources                                           //
+/////////////////////////////////////////////////////////////////////
+module backupVault 'br/public:avm/res/data-protection/backup-vault:0.7.0' = if (enableBackup) {
+  name: '${configuration.name}-backup'
+  params: {
+    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
+    location: location
+    // Assign Tags
+    tags: {
+      layer: configuration.displayName
+      id: rg_unique_id
+    }
+
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: 'Backup Operator'
+        principalId: managedCluster.outputs.kubeletIdentityObjectId
+        principalType: 'ServicePrincipal'
+      }
+    ]
   }
 }
 
