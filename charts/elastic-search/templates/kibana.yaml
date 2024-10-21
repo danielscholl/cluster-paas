@@ -10,43 +10,31 @@ spec:
   version: {{ $.Values.elasticVersion }}
   elasticsearchRef:
     name: elasticsearch-{{ $i }}
-  count: 3
+  count: 1
+  config:
+    elasticsearch.serviceAccountToken: null  # Explicitly set to null to disable
   podTemplate:
     spec:
-      initContainers:
-        - name: init-creds
-          image: mcr.microsoft.com/cbl-mariner/base/core:2.0
-          command: ['sh', '-c']
-          args:
-            - |
-              USERNAME=$(cat /mnt/secrets/username-{{ $i }})
-              PASSWORD=$(cat /mnt/secrets/password-{{ $i }})
-              KEY=$(cat /mnt/secrets/key-{{ $i }})
-              echo "ELASTICSEARCH_USERNAME=$USERNAME" > /shared/env
-              echo "ELASTICSEARCH_PASSWORD=$PASSWORD" >> /shared/env
-              echo "XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=$KEY" >> /shared/env
-          volumeMounts:
-            - name: secrets
-              mountPath: /mnt/secrets
-            - name: shared
-              mountPath: /shared
       containers:
         - name: kibana
-          envFrom:
-            - configMapRef:
-                name: kibana-env-{{ $i }}
           env:
             - name: ELASTICSEARCH_HOSTS
-              value: "http://elasticsearch-{{ $i }}-es-http.{{ $.Release.Namespace }}.svc.cluster.local:9200"
-          volumeMounts:
-            - name: shared
-              mountPath: /shared
-      volumes:
-        - name: secrets
-          secret:
-            secretName: elasticsearch-credentials
-        - name: shared
-          emptyDir: {}
+              value: "https://elasticsearch-{{ $i }}-es-http.{{ $.Release.Namespace }}.svc.cluster.local:9200"
+            - name: ELASTICSEARCH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: elastic-username-{{ $i }}
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: elastic-password-{{ $i }}
+            - name: XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: elastic-key-{{ $i }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -54,7 +42,5 @@ metadata:
   name: kibana-env-{{ $i }}
   namespace: {{ $.Release.Namespace }}
 data:
-  ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME}
-  ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD}
   XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY: ${XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY}
 {{- end }}
