@@ -601,7 +601,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
 //  App Configuration Provider                                     //
 /////////////////////////////////////////////////////////////////////
 // AKS has an extension for App Configuration but installing with Helm for now.
-module appConfigProviderExtension './app_configuration_provider.bicep' = {
+module appConfigProviderExtension './aks_appconfig_extension.bicep' = {
   name: '${configuration.name}-appconfig-provider'
   params: {
     clusterName: managedCluster.outputs.name
