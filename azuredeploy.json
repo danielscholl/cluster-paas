@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "9488645709671925220"
+      "templateHash": "8482154062554028556"
     },
     "name": "Managed Kubernetes.",
     "description": "This instance deploys a managed Kubernetes cluster."
@@ -21,7 +21,7 @@
     "userObjectId": {
       "type": "string",
       "metadata": {
-        "description": "The object ID of the user to assign the cluster admin role to."
+        "description": "The object ID of the user to assign a cluster admin role for."
       }
     },
     "enableBackup": {
@@ -31,25 +31,11 @@
         "description": "Enable Backup"
       }
     },
-    "stampTest": {
-      "type": "bool",
-      "defaultValue": false,
-      "metadata": {
-        "description": "Deploy Sample"
-      }
-    },
-    "instances": {
-      "type": "int",
-      "defaultValue": 1,
-      "metadata": {
-        "description": "Number of Instances"
-      }
-    },
-    "stampElastic": {
+    "elasticStamp": {
       "type": "bool",
       "defaultValue": true,
       "metadata": {
-        "description": "Enable Elastic"
+        "description": "Deploy an Elastic Stamp"
       }
     },
     "elasticVersion": {
@@ -61,7 +47,17 @@
         "7.17.24",
         "7.17.22",
         "7.16.3"
-      ]
+      ],
+      "metadata": {
+        "description": "Elastic Version"
+      }
+    },
+    "instances": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Number of Instances"
+      }
     },
     "dateStamp": {
       "type": "string",
@@ -79,6 +75,7 @@
         "input": "[createArray(createObject('secretName', format('elastic-username-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', 'elastic'), createObject('secretName', format('elastic-password-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', substring(uniqueString(resourceGroup().id, parameters('userObjectId'), parameters('location'), format('saltpass{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')])), 0, 13)), createObject('secretName', format('elastic-key-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', substring(uniqueString(resourceGroup().id, parameters('userObjectId'), parameters('location'), format('saltkey{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')])), 0, 13)))]"
       }
     ],
+    "stampTest": false,
     "enablePaasPool": false,
     "enableMesh": false,
     "configuration": {
@@ -20014,7 +20011,7 @@
                   "timeoutInSeconds": 300,
                   "url": "https://github.com/danielscholl/cluster-paas"
                 },
-                "kustomizations": "[shallowMerge(createArray(createObject('global', createObject('path', './software/global', 'dependsOn', createArray(), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), if(parameters('stampTest'), createObject('stamptest', createObject('path', './software/stamp-test', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject()), if(parameters('stampElastic'), createObject('stampelastic', createObject('path', './software/stamp-elastic', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject())))]"
+                "kustomizations": "[shallowMerge(createArray(createObject('global', createObject('path', './software/global', 'dependsOn', createArray(), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), if(variables('stampTest'), createObject('stamptest', createObject('path', './software/stamp-test', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject()), if(parameters('elasticStamp'), createObject('stampelastic', createObject('path', './software/stamp-elastic', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject())))]"
               }
             ]
           }

@@ -6,20 +6,14 @@ metadata description = 'This instance deploys a managed Kubernetes cluster.'
 @description('Specify the Azure region to place the application definition.')
 param location string = resourceGroup().location
 
-@description('The object ID of the user to assign the cluster admin role to.')
+@description('The object ID of the user to assign a cluster admin role for.')
 param userObjectId string
 
 @description('Enable Backup')
 param enableBackup bool = true
 
-@description('Deploy Sample')
-param stampTest bool = false
-
-@description('Number of Instances')
-param instances int = 1
-
-@description('Enable Elastic')
-param stampElastic bool = true
+@description('Deploy an Elastic Stamp')
+param elasticStamp bool = true
 
 @allowed([
   '8.15.3'
@@ -28,11 +22,20 @@ param stampElastic bool = true
   '7.17.22'
   '7.16.3'
 ])
+@description('Elastic Version')
 param elasticVersion string = '8.15.3'
+
+@description('Number of Instances')
+param instances int = 1
+
 
 @description('Date Stamp - Used for sentinel in configuration store.')
 param dateStamp string = utcNow()
 
+
+
+@description('Deploy Sample')
+var stampTest = false
 
 @description('Enable PaaS pool')
 var enablePaasPool = false
@@ -776,7 +779,7 @@ module flux 'br/public:avm/res/kubernetes-configuration/extension:0.3.4' = {
               prune: true
             }
           } : {})
-          ...(stampElastic ? {
+          ...(elasticStamp ? {
             stampelastic: {
               path: './software/stamp-elastic'
               dependsOn: ['global']
