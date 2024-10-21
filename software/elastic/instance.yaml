@@ -10,6 +10,8 @@ spec:
   dependsOn:
     - name: elastic-operator
       namespace: flux-system
+    - name: azure-keyvault-elastic
+      namespace: default
   chart:
     spec:
       chart: ./charts/elastic-search
