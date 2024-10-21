@@ -88,8 +88,8 @@ data:
     #!/bin/sh
 
     # Read the new user's username and password from Azure KeyVault
-    NEW_USERNAME=$(cat /mnt/azure-keyvault/elastic-username)
-    NEW_PASSWORD=$(cat /mnt/azure-keyvault/elastic-password)
+    NEW_USERNAME=$(cat /mnt/azure-keyvault/elastic-username-{{ $i }})
+    NEW_PASSWORD=$(cat /mnt/azure-keyvault/elastic-password-{{ $i }})
     
     # Define the custom role and user creation JSON payloads
     CUSTOM_ELASTIC_ROLE="service-role"
@@ -99,8 +99,11 @@ data:
     # Elasticsearch service URL
     ES_SERVICE_URL="http://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200"
 
+    # Use $ELASTIC_PASSWORD (passed from the container environment)
+    ELASTIC_AUTH="elastic:$ELASTIC_PASSWORD"
+
     # Check if the custom role already exists
-    role_response=$(curl -s -k -o /dev/null -w "%{http_code}" -w "%{http_code}" -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" \
+    role_response=$(curl -s -k -o /dev/null -w "%{http_code}" -w "%{http_code}" -u "$ELASTIC_AUTH" \
       "${ES_SERVICE_URL}/_security/role/$CUSTOM_ELASTIC_ROLE")
 
     if [ "$role_response" -eq 200 ]; then
@@ -108,7 +111,7 @@ data:
     else
       # Create the custom role
       create_role_response=$(curl -s -k -o /dev/null -w "%{http_code}" -X POST "${ES_SERVICE_URL}/_security/role/$CUSTOM_ELASTIC_ROLE" \
-        -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" \
+        -u "$ELASTIC_AUTH" \
         -H "Content-Type: application/json" \
         -d "$ROLE_JSON")
 
@@ -121,14 +124,14 @@ data:
     fi
 
     # Check if the new user already exists
-    user_response=$(curl -s -k -o /dev/null -w "%{http_code}" -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" \
+    user_response=$(curl -s -k -o /dev/null -w "%{http_code}" -u "$ELASTIC_AUTH" \
       "${ES_SERVICE_URL}/_security/user/$NEW_USERNAME")
 
     if [ "$user_response" -eq 200 ]; then
       echo "User $NEW_USERNAME already exists. Updating password."
       # Update the existing user's password
       update_password_response=$(curl -s -k -o /dev/null -w "%{http_code}" -X POST "${ES_SERVICE_URL}/_security/user/$NEW_USERNAME/_password" \
-        -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" \
+        -u "$ELASTIC_AUTH" \
         -H "Content-Type: application/json" \
         -d "{\"password\":\"$NEW_PASSWORD\"}")
 
@@ -151,7 +154,7 @@ data:
     else
       # Create the new user with the custom role
       create_user_response=$(curl -s -k -o /dev/null -w "%{http_code}" -X POST "${ES_SERVICE_URL}/_security/user/$NEW_USERNAME" \
-        -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" \
+        -u "$ELASTIC_AUTH" \
         -H "Content-Type: application/json" \
         -d "$USER_JSON")
 
