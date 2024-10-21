@@ -404,25 +404,25 @@ var configmapServices = [
     name: 'elasticInstances'
     value: string(elasticInstances)
     contentType: 'text/plain'
-    label: 'elastic-search'
+    label: 'elastic-values'
   }
   {
     name: 'elasticVersion'
     value: string(elasticVersion)
     contentType: 'text/plain'
-    label: 'elastic-search'
+    label: 'elastic-values'
   }
   {
     name: 'storageSize'
     value: '30Gi'
     contentType: 'text/plain'
-    label: 'elastic-search'
+    label: 'elastic-values'
   }
   {
     name: 'storageClass'
     value: 'managed-premium'
     contentType: 'text/plain'
-    label: 'elastic-search'
+    label: 'elastic-values'
   }
 ]
 
