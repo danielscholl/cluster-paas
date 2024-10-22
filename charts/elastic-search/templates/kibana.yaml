@@ -6,6 +6,8 @@ kind: Kibana
 metadata:
   name: kibana-{{ $i }}
   namespace: {{ $.Release.Namespace }}
+  annotations:
+    kibana.k8s.elastic.co/skip-auth-config: "true" # Disable service account auth.
 spec:
   version: {{ $.Values.elasticVersion }}
   elasticsearchRef:
