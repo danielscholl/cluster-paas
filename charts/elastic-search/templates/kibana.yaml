@@ -45,16 +45,16 @@ spec:
           env:
             - name: ELASTICSEARCH_HOSTS
               value: "https://elasticsearch-{{ $i }}-es-http.{{ $.Release.Namespace }}.svc.cluster.local:9200"
-            - name: ELASTICSEARCH_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: elasticsearch-credentials
-                  key: username-{{ $i }}
-            - name: ELASTICSEARCH_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: elasticsearch-credentials
-                  key: password-{{ $i }}
+            # - name: ELASTICSEARCH_USERNAME
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: elasticsearch-credentials
+            #       key: username-{{ $i }}
+            # - name: ELASTICSEARCH_PASSWORD
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: elasticsearch-credentials
+            #       key: password-{{ $i }}
             - name: XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY
               valueFrom:
                 secretKeyRef:
