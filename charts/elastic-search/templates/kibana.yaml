@@ -12,7 +12,7 @@ spec:
     name: elasticsearch-{{ $i }}
   count: 1
   config:
-    elasticsearch.serviceAccountToken: workload-identity-sa
+    # elasticsearch.serviceAccountToken: workload-identity-sa
   podTemplate:
     spec:
       initContainers:
@@ -45,16 +45,16 @@ spec:
           env:
             - name: ELASTICSEARCH_HOSTS
               value: "http://elasticsearch-{{ $i }}-es-http.{{ $.Release.Namespace }}.svc.cluster.local:9200"
-            # - name: ELASTICSEARCH_USERNAME
-            #   valueFrom:
-            #     secretKeyRef:
-            #       name: elasticsearch-credentials
-            #       key: username-{{ $i }}
-            # - name: ELASTICSEARCH_PASSWORD
-            #   valueFrom:
-            #     secretKeyRef:
-            #       name: elasticsearch-credentials
-            #       key: password-{{ $i }}
+            - name: ELASTICSEARCH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: username-{{ $i }}
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: password-{{ $i }}
             - name: XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY
               valueFrom:
                 secretKeyRef:
