@@ -11,6 +11,8 @@ spec:
   elasticsearchRef:
     name: elasticsearch-{{ $i }}
   count: 1
+  config:
+    elasticsearch.serviceAccountToken: workload-identity-sa
   podTemplate:
     spec:
       initContainers:
