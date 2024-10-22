@@ -10,12 +10,14 @@ spec:
   version: {{ $.Values.elasticVersion }}
   elasticsearchRef:
     name: elasticsearch-{{ $i }}
-  count: 1
   config:
-    elasticsearch.serviceAccountToken: /var/run/secrets/tokens/workload-identity-sa  # Correctly set the path to the service account token
+    elasticsearch.hosts: "http://elasticsearch-{{ $i }}-es-http.{{ $.Release.Namespace }}.svc.cluster.local:9200"
+    elasticsearch.username: "${ELASTICSEARCH_USERNAME}"
+    elasticsearch.password: "${ELASTICSEARCH_PASSWORD}"
+    xpack.encryptedSavedObjects.encryptionKey: "${XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY}"
+  count: 1
   podTemplate:
     spec:
-      serviceAccountName: workload-identity-sa  # Ensure the service account is set
       initContainers:
       - name: health-check
         image: mcr.microsoft.com/cbl-mariner/base/core:2.0
@@ -44,32 +46,23 @@ spec:
       containers:
         - name: kibana
           env:
-            - name: ELASTICSEARCH_HOSTS
-              value: "http://elasticsearch-{{ $i }}-es-http.{{ $.Release.Namespace }}.svc.cluster.local:9200"
+            - name: ELASTICSEARCH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: username-{{ $i }}
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: password-{{ $i }}
             - name: XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY
               valueFrom:
                 secretKeyRef:
                   name: elasticsearch-credentials
                   key: key-{{ $i }}
-          volumeMounts:
-            - name: sa-token
-              mountPath: /var/run/secrets/tokens  # Mount the service account token
       volumes:
-      - name: es-basic-auth
+      - name: es-basic-auth  # Default credentials for elastic.
         secret:
           secretName: elasticsearch-{{ $i }}-es-elastic-user
-      - name: sa-token
-        projected:
-          sources:
-            - serviceAccountToken:
-                path: workload-identity-sa
-                expirationSeconds: 3600
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: kibana-env-{{ $i }}
-  namespace: {{ $.Release.Namespace }}
-data:
-  XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY: ${XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY}
 {{- end }}
