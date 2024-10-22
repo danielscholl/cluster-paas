@@ -33,6 +33,7 @@ spec:
         node.store.allow_mmap: false
       podTemplate:
         spec:
+          serviceAccountName: workload-identity-sa  # Specify the service account for authentication
           containers:
             - name: elasticsearch
               # Remove the ES_JAVA_OPTS environment variable
