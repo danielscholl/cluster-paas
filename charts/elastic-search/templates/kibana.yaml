@@ -44,7 +44,7 @@ spec:
         - name: kibana
           env:
             - name: ELASTICSEARCH_HOSTS
-              value: "https://elasticsearch-{{ $i }}-es-http.{{ $.Release.Namespace }}.svc.cluster.local:9200"
+              value: "http://elasticsearch-{{ $i }}-es-http.{{ $.Release.Namespace }}.svc.cluster.local:9200"
             # - name: ELASTICSEARCH_USERNAME
             #   valueFrom:
             #     secretKeyRef:
