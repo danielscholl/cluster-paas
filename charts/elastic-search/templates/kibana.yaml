@@ -10,8 +10,8 @@ metadata:
     kibana.k8s.elastic.co/skip-auth-config: "true" # Disable service account auth.
 spec:
   version: {{ $.Values.elasticVersion }}
-  elasticsearchRef:
-    name: elasticsearch-{{ $i }}
+  # elasticsearchRef:
+  #   name: elasticsearch-{{ $i }}
   config:
     elasticsearch.hosts: "http://elasticsearch-{{ $i }}-es-http.{{ $.Release.Namespace }}.svc.cluster.local:9200"
     elasticsearch.username: "${ELASTICSEARCH_USERNAME}"
