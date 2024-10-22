@@ -11,8 +11,6 @@ spec:
   elasticsearchRef:
     name: elasticsearch-{{ $i }}
   count: 1
-  config:
-    elasticsearch.serviceAccountToken: null  # Explicitly set to null to disable
   podTemplate:
     spec:
       initContainers:
