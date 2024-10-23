@@ -6,6 +6,16 @@ metadata description = 'This instance deploys a managed Kubernetes cluster.'
 @description('Specify the Azure region to place the application definition.')
 param location string = resourceGroup().location
 
+@description('The size of the VM to use for the cluster.')
+@allowed([
+  'Standard_D2s_v3'
+  'Standard_D4s_v3'
+  'Standard_D4_v3'
+  'Standard_DS2_v2'
+  'Standard_DS3_v2'
+])
+param vmSize string = 'Standard_DS3_v2'
+
 @description('The object ID of the user to assign a cluster admin role for.')
 param userObjectId string
 
@@ -71,13 +81,12 @@ var configuration = {
   cluster: {
     sku: 'Automatic'
     tier: 'Standard'
-    vmSize: 'Standard_DS3_v2'
+    vmSize: vmSize
   }
 }
 
 @description('Unique ID for the resource group')
 var rg_unique_id = '${replace(configuration.name, '-', '')}${uniqueString(resourceGroup().id, configuration.name)}'
-
 
 
 /////////////////////////////////////////////////////////////////////
@@ -98,7 +107,6 @@ module identity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.0
 }
 
 
-
 /////////////////////////////////////////////////////////////////////
 //  Monitoring Resources                                           //
 /////////////////////////////////////////////////////////////////////
@@ -116,7 +124,6 @@ module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.7.0' = {
     skuName: configuration.logs.sku
   }
 }
-
 
 
 /////////////////////////////////////////////////////////////////////
@@ -173,6 +180,12 @@ module managedCluster './managed-cluster/main.bicep' = {
       }
       {
         roleDefinitionIdOrName: 'Azure Kubernetes Service RBAC Cluster Admin'
+        principalId: identity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      // Role Assignment requiredfor the trusted role binding deployment script to execute.
+      {
+        roleDefinitionIdOrName: 'Kubernetes Agentless Operator'
         principalId: identity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
@@ -296,6 +309,17 @@ module assignments './aks_policy.bicep' = {
   ]
 }
 
+// AKS Extensions 
+module appConfigExtension './aks_appconfig_extension.bicep' = {
+  name: '${configuration.name}-appconfig-extension'
+  params: {
+    clusterName: managedCluster.outputs.name
+  }
+  dependsOn: [
+    managedCluster
+  ]
+}
+
 // Retrieve the NAT Public IP
 module natClusterIP './nat_public_ip.bicep' = {
   name: '${configuration.name}-nat-public-ip'
@@ -333,7 +357,6 @@ module federatedCredentials './federated_identity.bicep' = [for (cred, index) in
     managedCluster
   ]
 }]
-
 
 
 /////////////////////////////////////////////////////////////////////
@@ -378,7 +401,6 @@ module registry 'br/public:avm/res/container-registry/registry:0.5.1' = {
   }
   
 }
-
 
 
 /////////////////////////////////////////////////////////////////////
@@ -567,32 +589,6 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
 
 
 /////////////////////////////////////////////////////////////////////
-//  AKS Extensions                                                 //
-/////////////////////////////////////////////////////////////////////
-module appConfigExtension './aks_appconfig_extension.bicep' = {
-  name: '${configuration.name}-appconfig-extension'
-  params: {
-    clusterName: managedCluster.outputs.name
-  }
-  dependsOn: [
-    managedCluster
-  ]
-}
-
-module backupExtension './aks_backup_extension.bicep' = {
-  name: '${configuration.name}-backup-extension'
-  params: {
-    clusterName: managedCluster.outputs.name
-    storageAccountName: storageAccount.outputs.name
-  }
-  dependsOn: [
-    managedCluster
-  ]
-}
-
-
-
-/////////////////////////////////////////////////////////////////////
 //  Observability Resources                                        //
 /////////////////////////////////////////////////////////////////////
 module prometheus 'aks_prometheus.bicep' = {
@@ -644,7 +640,7 @@ module grafana 'aks_grafana.bicep' = {
 
 
 /////////////////////////////////////////////////////////////////////
-//  Software Resources                                             //
+//  Backup Resources                                               //
 /////////////////////////////////////////////////////////////////////
 module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
   name: '${configuration.name}-storage'
@@ -681,10 +677,15 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
         principalId: identity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
+      {
+        roleDefinitionIdOrName: 'Contributor'
+        principalId: managedCluster.outputs.kubeletIdentityObjectId
+        principalType: 'ServicePrincipal'
+      }
     ]
 
     allowBlobPublicAccess: false
-    allowSharedKeyAccess: false
+    allowSharedKeyAccess: !enableBackup
     publicNetworkAccess: 'Enabled'
 
     networkAcls: {
@@ -710,9 +711,6 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
   }
 }
 
-/////////////////////////////////////////////////////////////////////
-//  Monitoring Resources                                           //
-/////////////////////////////////////////////////////////////////////
 module backupVault 'br/public:avm/res/data-protection/backup-vault:0.7.0' = if (enableBackup) {
   name: '${configuration.name}-backup'
   params: {
@@ -724,16 +722,149 @@ module backupVault 'br/public:avm/res/data-protection/backup-vault:0.7.0' = if (
       id: rg_unique_id
     }
 
+    managedIdentities: {
+      systemAssigned: true
+    }
+
     roleAssignments: [
+      // Role Assignment requiredfor the trusted role binding deployment script to execute.
       {
-        roleDefinitionIdOrName: 'Backup Operator'
-        principalId: managedCluster.outputs.kubeletIdentityObjectId
+        roleDefinitionIdOrName: 'Backup Reader'
+        principalId: identity.outputs.principalId
         principalType: 'ServicePrincipal'
+      }
+    ]
+
+    backupPolicies: [
+      {
+        name: 'Manual'
+        properties: {
+          datasourceTypes: [
+            'Microsoft.ContainerService/managedClusters'
+          ]
+          objectType: 'BackupPolicy'
+          policyRules: [
+            {
+              lifecycles: [
+                {
+                  deleteAfter: {
+                    duration: 'P7D'
+                    objectType: 'AbsoluteDeleteOption'
+                  }
+                  targetDataStoreCopySettings: []
+                  sourceDataStore: {
+                    dataStoreType: 'OperationalStore'
+                    objectType: 'DataStoreInfoBase'
+                  }
+                }
+              ]
+              isDefault: true
+              name: 'Default'
+              objectType: 'AzureRetentionRule'
+            }
+            {
+              backupParameters: {
+                backupType: 'Incremental'
+                objectType: 'AzureBackupParams'
+              }
+              trigger: {
+                schedule: {
+                  repeatingTimeIntervals: [
+                    'R/2024-10-22T18:08:05+00:00/PT4H'
+                  ]
+                  timeZone: 'Coordinated Universal Time'
+                }
+                taggingCriteria: [
+                  {
+                    tagInfo: {
+                      tagName: 'Default'
+                      id: 'Default_'
+                    }
+                    taggingPriority: 99
+                    isDefault: true
+                  }
+                ]
+                objectType: 'ScheduleBasedTriggerContext'
+              }
+              dataStore: {
+                dataStoreType: 'OperationalStore'
+                objectType: 'DataStoreInfoBase'
+              }
+              name: 'BackupHourly'
+              objectType: 'AzureBackupRule'
+            }
+          ]
+        }
       }
     ]
   }
 }
 
+module backupExtension './aks_backup_extension.bicep' = if (enableBackup) {
+  name: '${configuration.name}-backup-extension'
+  params: {
+    clusterName: managedCluster.outputs.name
+    storageAccountName: storageAccount.outputs.name
+    backupVaultName: backupVault.outputs.name
+  }
+  dependsOn: [
+    managedCluster
+    backupVault
+    storageAccount
+  ]
+}
+
+module trustedRoleBinding 'br/public:avm/res/resources/deployment-script:0.4.0' = if (enableBackup) {
+  name: 'aksTrustedRoleBindingDeploymentScript'
+  
+  params: {
+    kind: 'AzureCLI'
+    name: 'aksTrustedRoleBindingScript'
+    azCliVersion: '2.63.0'
+    location: location
+    managedIdentities: {
+      userAssignedResourcesIds: [
+        identity.outputs.resourceId
+      ]
+    }
+
+    environmentVariables: [
+      {
+        name: 'rgName'
+        value: resourceGroup().name
+      }
+      {
+        name: 'vaultId'
+        value: backupVault.outputs.resourceId
+      }
+      {
+        name: 'clusterName'
+        value: managedCluster.outputs.name
+      }
+      {
+        name: 'bindingName'
+        value: 'backup-binding'
+      }
+    ]
+    
+    timeout: 'PT30M'
+    retentionInterval: 'PT1H'
+
+    scriptContent: '''
+      az login --identity
+      az aks trustedaccess rolebinding create --resource-group $rgName --cluster-name $clusterName --name $bindingName --source-resource-id $vaultId --roles Microsoft.DataProtection/backupVaults/backup-operator
+    '''
+  }
+  dependsOn: [
+    backupVault
+    managedCluster
+    storageAccount
+  ]
+}
+
+/////////////////////////////////////////////////////////////////////
+//  Software Resources                                               //
+/////////////////////////////////////////////////////////////////////
 module gitOpsUpload './software-upload/main.bicep' = {
   name: '${configuration.name}-storage-gitops-upload'
   params: {
@@ -840,6 +971,7 @@ module flux 'br/public:avm/res/kubernetes-configuration/extension:0.3.4' = {
   ]
 }
 
+// Lock down the storage account to the NAT IP
 module storageAcl './storage_acl.bicep' = {
   name: '${configuration.name}-storage-acl'
   params: {
@@ -850,6 +982,7 @@ module storageAcl './storage_acl.bicep' = {
   }
   dependsOn: [
     gitOpsUpload
+    trustedRoleBinding
   ]
 }
 

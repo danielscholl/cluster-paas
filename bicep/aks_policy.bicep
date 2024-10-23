@@ -1,11 +1,9 @@
 @description('The name of the Azure Kubernetes Service Cluster')
 param clusterName string = ''
 
-
 resource managedCluster 'Microsoft.ContainerService/managedClusters@2023-05-02-preview' existing = if (clusterName != '') {
   name: clusterName
 }
-
 
 var policyDefinitionId = '/providers/Microsoft.Authorization/policySetDefinitions/c047ea8e-9c78-49b2-958b-37e56d291a44'
 resource policyAssignment 'Microsoft.Authorization/policyAssignments@2024-04-01' = {
@@ -42,16 +40,3 @@ resource policyAssignment 'Microsoft.Authorization/policyAssignments@2024-04-01'
     }
   }
 }
-
-
-
-
-// resource updateNetworkRules 'Microsoft.Storage/storageAccounts@2022-09-01' =  {
-//   name: storageAccount.name  // Reference the existing storage account's name
-//   properties: {
-//     networkAcls: {
-//       defaultAction: 'Deny'  // Deny access unless explicitly allowed
-//       bypass: 'AzureServices'  // Allow access from Azure services (e.g., Azure Functions)
-//     }
-//   }
-// }
