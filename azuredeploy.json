@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "14074182730818205311"
+      "templateHash": "15156899906758612887"
     },
     "name": "Managed Kubernetes.",
     "description": "This instance deploys a managed Kubernetes cluster."
@@ -14600,7 +14600,7 @@
             "value": false
           },
           "allowSharedKeyAccess": {
-            "value": "[not(parameters('enableBackup'))]"
+            "value": "[parameters('enableBackup')]"
           },
           "publicNetworkAccess": {
             "value": "Enabled"
@@ -19306,6 +19306,13 @@
               }
             ]
           },
+          "securitySettings": {
+            "value": {
+              "softDeleteSettings": {
+                "enhancedSecurityState": "Disabled"
+              }
+            }
+          },
           "backupPolicies": {
             "value": [
               {
@@ -19869,7 +19876,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "3325329409434604345"
+              "templateHash": "8899038170756501949"
             }
           },
           "parameters": {
@@ -19948,6 +19955,37 @@
               "name": "[guid(parameters('backupVaultName'), resourceGroup().id, 'Reader')]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
+                "principalId": "[reference(resourceId('Microsoft.DataProtection/backupVaults', parameters('backupVaultName')), '2024-04-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2020-04-01-preview",
+              "name": "[guid(parameters('backupVaultName'), resourceGroup().id, 'Disk Snapshot Contributor')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7efff54f-a5b4-42b5-a1c5-5411624893ce')]",
+                "principalId": "[reference(resourceId('Microsoft.DataProtection/backupVaults', parameters('backupVaultName')), '2024-04-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2020-04-01-preview",
+              "name": "[guid(parameters('backupVaultName'), resourceGroup().id, 'Data Operator for Managed Disks')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '959f8984-c045-4866-89c7-12bf9737be2e')]",
+                "principalId": "[reference(resourceId('Microsoft.DataProtection/backupVaults', parameters('backupVaultName')), '2024-04-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2020-04-01-preview",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
+              "name": "[guid(parameters('backupVaultName'), resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), 'Storage Blob Data Reader')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1')]",
                 "principalId": "[reference(resourceId('Microsoft.DataProtection/backupVaults', parameters('backupVaultName')), '2024-04-01', 'full').identity.principalId]",
                 "principalType": "ServicePrincipal"
               }
@@ -21257,6 +21295,7 @@
       ]
     },
     {
+      "condition": "[not(parameters('enableBackup'))]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "[format('{0}-storage-acl', variables('configuration').name)]",
@@ -21340,8 +21379,7 @@
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', format('{0}-storage-gitops-upload', variables('configuration').name))]",
         "[resourceId('Microsoft.Resources/deployments', format('{0}-nat-public-ip', variables('configuration').name))]",
-        "[resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name))]",
-        "[resourceId('Microsoft.Resources/deployments', 'aksTrustedRoleBindingDeploymentScript')]"
+        "[resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name))]"
       ]
     },
     {

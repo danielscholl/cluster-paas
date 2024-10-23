@@ -685,7 +685,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
     ]
 
     allowBlobPublicAccess: false
-    allowSharedKeyAccess: !enableBackup
+    allowSharedKeyAccess: enableBackup
     publicNetworkAccess: 'Enabled'
 
     networkAcls: {
@@ -734,6 +734,12 @@ module backupVault 'br/public:avm/res/data-protection/backup-vault:0.7.0' = if (
         principalType: 'ServicePrincipal'
       }
     ]
+
+    securitySettings: {
+      softDeleteSettings: {
+        enhancedSecurityState: 'Disabled'
+      }
+    }
 
     backupPolicies: [
       {
@@ -971,8 +977,9 @@ module flux 'br/public:avm/res/kubernetes-configuration/extension:0.3.4' = {
   ]
 }
 
-// Lock down the storage account to the NAT IP
-module storageAcl './storage_acl.bicep' = {
+
+// Lock down the storage account to the NAT IP  (Backup UI checks think we don't have access to the storage account)
+module storageAcl './storage_acl.bicep' = if (!enableBackup) {
   name: '${configuration.name}-storage-acl'
   params: {
     storageName: storageAccount.outputs.name
@@ -982,7 +989,6 @@ module storageAcl './storage_acl.bicep' = {
   }
   dependsOn: [
     gitOpsUpload
-    trustedRoleBinding
   ]
 }
 

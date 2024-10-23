@@ -75,6 +75,39 @@ resource roleReaderVaultToResourceGroup 'Microsoft.Authorization/roleAssignments
   }
 }
 
+// Role Assignment for Backup Vault as Disk Snapshot Contributor
+resource roleReaderVaultToResourceGroupDiskSnapshot 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(backupVault.name, resourceGroup().id, 'Disk Snapshot Contributor')
+  scope: resourceGroup()
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7efff54f-a5b4-42b5-a1c5-5411624893ce') // Disk Snapshot Contributor role definition ID
+    principalId: backupVault.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Role Assignment for Backup Vault as Data Operator for Managed Disks
+resource roleReaderVaultToResourceGroupDataOperator 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(backupVault.name, resourceGroup().id, 'Data Operator for Managed Disks')
+  scope: resourceGroup()
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '959f8984-c045-4866-89c7-12bf9737be2e') // Data Operator for Managed Disks role definition ID
+    principalId: backupVault.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Role Assignment for Backup Vault as Storage Blob Data Reader
+resource roleReaderVaultToStorageBlobDataReader 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(backupVault.name, storageAccount.id, 'Storage Blob Data Reader')
+  scope: storageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1') // Storage Blob Dagta Reader role definition ID
+    principalId: backupVault.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // Role Assignment for AKS Cluster as Contributor over the Snapshot Resource Group
 resource roleContributorClusterToResourceGroup 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
   name: guid(existingManagedCluster.name, resourceGroup().id, 'Contributor')
